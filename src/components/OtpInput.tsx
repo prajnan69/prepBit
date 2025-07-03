@@ -1,17 +1,22 @@
-import { useState, type ChangeEvent, type KeyboardEvent } from 'react';
+import { useState, type ChangeEvent, type KeyboardEvent, type ClipboardEvent } from 'react';
+import { useHaptics } from '../hooks/useHaptics';
 
 interface OtpInputProps {
   length: number;
   onComplete: (otp: string) => void;
   status?: 'error' | 'success' | 'default';
   onInputChange?: () => void;
+  disabled?: boolean;
 }
 
-const OtpInput = ({ length, onComplete, status = 'default', onInputChange }: OtpInputProps) => {
+const OtpInput = ({ length, onComplete, status = 'default', onInputChange, disabled = false }: OtpInputProps) => {
   const [otp, setOtp] = useState<string[]>(new Array(length).fill(''));
+  const { triggerHaptic } = useHaptics();
 
   const handleChange = (element: HTMLInputElement, index: number) => {
     if (isNaN(Number(element.value))) return;
+
+    triggerHaptic();
 
     if (onInputChange) {
       onInputChange();
@@ -38,6 +43,21 @@ const OtpInput = ({ length, onComplete, status = 'default', onInputChange }: Otp
     }
   };
 
+  const handlePaste = (e: ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData('text/plain').slice(0, length);
+    const newOtp = [...otp];
+    for (let i = 0; i < pastedData.length; i++) {
+      if (i < length) {
+        newOtp[i] = pastedData[i];
+      }
+    }
+    setOtp(newOtp);
+    if (newOtp.every((digit) => digit !== '')) {
+      onComplete(newOtp.join(''));
+    }
+  };
+
   return (
     <div className="flex justify-center space-x-2">
       {otp.map((data, index) => {
@@ -56,8 +76,10 @@ const OtpInput = ({ length, onComplete, status = 'default', onInputChange }: Otp
               type="text"
               maxLength={1}
               value={data}
+              disabled={disabled}
               onChange={(e) => handleChange(e.currentTarget, index)}
               onKeyDown={(e) => handleKeyDown(e, index)}
+              onPaste={index === 0 ? handlePaste : undefined}
               className={`w-full h-full border-none text-center text-2xl bg-transparent focus:outline-none ${
                 data ? 'animate-slide-up-digit' : ''
               }`}

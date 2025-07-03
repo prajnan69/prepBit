@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useNavigate } from 'react-router-dom';
+import { IonPage, IonContent, useIonRouter } from '@ionic/react';
 import { debounce } from 'lodash';
 import { Listbox } from '@headlessui/react';
 import { CheckIcon, ChevronUpDownIcon } from '@heroicons/react/20/solid';
@@ -22,7 +22,7 @@ const AdditionalInfoPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [usernameError, setUsernameError] = useState<string | null>(null);
   const [isCheckingUsername, setIsCheckingUsername] = useState(false);
-  const navigate = useNavigate();
+  const ionRouter = useIonRouter();
 
   const checkUsername = async (username: string) => {
     if (username.length < 3) {
@@ -88,18 +88,20 @@ const AdditionalInfoPage = () => {
       if (error) {
         setError(error.message);
       } else {
-        navigate('/summaries');
+        ionRouter.push('/');
       }
     } else {
       setError('You must be logged in to complete your profile.');
-      navigate('/login');
+      ionRouter.push('/login');
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-white animate-fade-in">
-      <div className="w-full max-w-sm p-8 space-y-8">
-        <div className="text-center">
+    <IonPage>
+      <IonContent>
+        <div className="min-h-screen flex items-center justify-center bg-white animate-fade-in">
+          <div className="w-full max-w-sm p-8 space-y-8">
+            <div className="text-center">
           <h1 className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-orange-500">
             Almost there!
           </h1>
@@ -222,8 +224,10 @@ const AdditionalInfoPage = () => {
             Complete Profile
           </button>
         </form>
-      </div>
-    </div>
+          </div>
+        </div>
+      </IonContent>
+    </IonPage>
   );
 };
 

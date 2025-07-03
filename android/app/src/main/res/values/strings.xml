@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PrepBit</string>
+    <string name="title_activity_main">PrepBit</string>
+    <string name="package_name">com.prepbit.app</string>
+    <string name="custom_url_scheme">com.prepbit.app</string>
+</resources>
