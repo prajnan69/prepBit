@@ -14,6 +14,7 @@ import Tabs from './components/Tabs';
 import SupportDrawer from './components/SupportDrawer';
 import ArticlePage from './components/ArticlePage';
 import PrivacyPolicyPage from './components/PrivacyPolicyPage';
+import DeleteAccountPage from './components/DeleteAccountPage';
 import { useAuth } from './hooks/useAuth';
 
 import '@ionic/react/css/core.css';
@@ -88,6 +89,7 @@ const App = () => {
           <IonRouterOutlet>
             <Switch>
               <Route path="/privacy-policy" component={PrivacyPolicyPage} exact />
+              <Route path="/delete-account" component={DeleteAccountPage} exact />
               <Route path="/login" component={LoginPage} exact />
               <Route path="/additional-info" component={AdditionalInfoPage} exact />
               <Route path="/" render={() => (
