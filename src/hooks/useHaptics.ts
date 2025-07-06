@@ -5,10 +5,7 @@ export const useHaptics = () => {
   const triggerHaptic = async () => {
     const platform = Capacitor.getPlatform();
     if (platform !== 'ios') {
-      for (let i = 0; i < 3; i++) {
-        await Haptics.vibrate({ duration: 15 });
-        await new Promise(resolve => setTimeout(resolve, 50));
-      }
+      await Haptics.vibrate({ duration: 15 });
     } else {
       await Haptics.impact({ style: ImpactStyle.Medium });
     }
