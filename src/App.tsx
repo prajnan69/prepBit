@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
 import { Route, Switch } from 'react-router-dom';
-import { IonApp, IonRouterOutlet, setupIonicReact } from '@ionic/react';
+import { IonApp, IonRouterOutlet, setupIonicReact, useIonRouter } from '@ionic/react';
 import { IonReactRouter } from '@ionic/react-router';
 import { supabase } from './lib/supabaseClient';
 import { StatusBar } from '@capacitor/status-bar';
 import { NavigationBar } from '@squareetlabs/capacitor-navigation-bar';
+import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { ProfileProvider } from './context/ProfileContext';
+import { SearchProvider } from './context/SearchContext';
 import LoginPage from './components/LoginPage';
 import AdditionalInfoPage from './components/AdditionalInfoPage';
+import TimeSelectionPage from './components/TimeSelectionPage';
+import PlayStoreRedirectPage from './components/PlayStoreRedirectPage';
 import Toast from './components/Toast';
 import Tabs from './components/Tabs';
 import SupportDrawer from './components/SupportDrawer';
@@ -16,6 +20,7 @@ import ArticlePage from './components/ArticlePage';
 import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import DeleteAccountPage from './components/DeleteAccountPage';
 import { useAuth } from './hooks/useAuth';
+import NotificationToast from './components/NotificationToast';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -33,6 +38,30 @@ setupIonicReact();
 
 const App = () => {
   const { session, loading } = useAuth();
+  const ionRouter = useIonRouter();
+
+  useEffect(() => {
+    if (Capacitor.getPlatform() === 'android' && !Capacitor.isNativePlatform()) {
+      ionRouter.push('/install', 'root', 'replace');
+    }
+  }, [ionRouter]);
+
+  useEffect(() => {
+    const addListener = async () => {
+      const listener = await CapacitorApp.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+        if (ionRouter.canGoBack()) {
+          ionRouter.goBack();
+        } else {
+          CapacitorApp.exitApp();
+        }
+      });
+
+      return () => {
+        listener.remove();
+      };
+    };
+    addListener();
+  }, [ionRouter]);
 
   useEffect(() => {
     const setupBars = async () => {
@@ -59,6 +88,7 @@ const App = () => {
   const [showToast, setShowToast] = useState(false);
   const [examType, setExamType] = useState('');
   const [supportDrawer, setSupportDrawer] = useState<{ isOpen: boolean; type: 'bug' | 'feedback' | 'urgent' | null }>({ isOpen: false, type: null });
+  const [notification, setNotification] = useState<any>(null);
 
   const showToastWithMessage = (message: string) => {
     setToastMessage(message);
@@ -82,16 +112,44 @@ const App = () => {
     fetchUserProfile();
   }, [session]);
 
+  useEffect(() => {
+    if (session?.user) {
+      const channel = supabase
+        .channel(`toast-notifications:${session.user.id}`)
+        .on(
+          'postgres_changes',
+          { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${session.user.id}` },
+          (payload) => {
+            if (payload.eventType === 'INSERT') {
+              setNotification(payload.new);
+            } else if (payload.eventType === 'UPDATE') {
+              setNotification((current: any) =>
+                current && current.id === payload.new.id ? payload.new : current
+              );
+            }
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    }
+  }, [session]);
+
   return (
     <IonApp>
       <ProfileProvider>
-        <IonReactRouter>
-          <IonRouterOutlet>
-            <Switch>
+        <SearchProvider>
+          <IonReactRouter>
+            <IonRouterOutlet>
+              <Switch>
               <Route path="/privacy-policy" component={PrivacyPolicyPage} exact />
               <Route path="/delete-account" component={DeleteAccountPage} exact />
               <Route path="/login" component={LoginPage} exact />
               <Route path="/additional-info" component={AdditionalInfoPage} exact />
+              <Route path="/time-selection" component={TimeSelectionPage} exact />
+              <Route path="/install" component={PlayStoreRedirectPage} exact />
               <Route path="/" render={() => (
                 <PrivateRoute>
                   <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />
@@ -100,6 +158,7 @@ const App = () => {
             </Switch>
           </IonRouterOutlet>
         </IonReactRouter>
+        </SearchProvider>
       </ProfileProvider>
       <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} />
       {supportDrawer.isOpen && supportDrawer.type && (
@@ -110,6 +169,7 @@ const App = () => {
           showToast={showToastWithMessage}
         />
       )}
+      <NotificationToast notification={notification} onClose={() => setNotification(null)} />
     </IonApp>
   );
 };

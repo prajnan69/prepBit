@@ -113,7 +113,9 @@ const ArticleCard = ({ article, showToast, isReadLaterPage = false, onDismiss }:
             <img
               src={article.image_url}
               alt={article.title}
-              className="w-20 h-20 aspect-square object-cover rounded-lg bg-gray-100"
+              className={`w-20 h-20 aspect-square object-cover rounded-lg bg-gray-100 ${
+                article.source === 'Google' ? 'brightness-75' : ''
+              }`}
             />
           ) : (
             <div className="w-20 h-20 aspect-square bg-gray-100 rounded-lg flex items-center justify-center">

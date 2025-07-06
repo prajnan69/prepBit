@@ -11,6 +11,7 @@ import {
   FileText,
   Lightbulb,
   Bookmark,
+  Bell,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -19,6 +20,7 @@ import config from '../config';
 import TestDrawer from './TestDrawer';
 import ValueAddDrawer from './ValueAddDrawer';
 import Keyword from './Keyword';
+import { IonButton } from '@ionic/react';
 
 const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) => {
   const ionRouter = useIonRouter();
@@ -38,6 +40,8 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
   const [showTestText, setShowTestText] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [showNotifyButton, setShowNotifyButton] = useState(false);
+  const [notificationId, setNotificationId] = useState<number | null>(null);
 
   useIonViewWillEnter(() => {
     const fetchData = async () => {
@@ -97,6 +101,10 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
   useEffect(() => {
     const fetchPrelimsData = async () => {
       setLoadingPrelims(true);
+      setShowNotifyButton(false);
+      const timer = setTimeout(() => {
+        setShowNotifyButton(true);
+      }, 3000);
       try {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const res = await axios.post(
@@ -105,15 +113,28 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setPrelimsData(res.data);
+        if (article && userId) {
+          await supabase
+            .from('notifications')
+            .update({ status: 'done', title: 'Your article is ready' })
+            .eq('article_id', article.id)
+            .eq('user_id', userId)
+            .eq('status', 'loading');
+        }
       } catch (e) {
         console.error('Error fetching prelims:', e);
       } finally {
         setLoadingPrelims(false);
+        clearTimeout(timer);
       }
     };
 
     const fetchMainsData = async () => {
       setLoadingMains(true);
+      setShowNotifyButton(false);
+      const timer = setTimeout(() => {
+        setShowNotifyButton(true);
+      }, 3000);
       try {
         const token = (await supabase.auth.getSession()).data.session?.access_token;
         const res = await axios.post(
@@ -122,10 +143,19 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
           { headers: { Authorization: `Bearer ${token}` } }
         );
         setMainsData(res.data);
+        if (article && userId) {
+          await supabase
+            .from('notifications')
+            .update({ status: 'done', title: 'Your article is ready' })
+            .eq('article_id', article.id)
+            .eq('user_id', userId)
+            .eq('status', 'loading');
+        }
       } catch (e) {
         console.error('Error fetching mains:', e);
       } finally {
         setLoadingMains(false);
+        clearTimeout(timer);
       }
     };
 
@@ -133,7 +163,7 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
       fetchPrelimsData();
       fetchMainsData();
     }
-  }, [article]);
+  }, [article, notificationId]);
 
   const toggleBookmark = async () => {
     if (!userId || !article) return;
@@ -188,8 +218,37 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
         </div>;
       case 'prelims':
         return loadingPrelims
-          ? <div className="flex justify-center items-center h-32">
+          ? <div className="flex flex-col justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              {showNotifyButton && (
+                <div className="fixed bottom-20 left-0 right-0 flex justify-center">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <button
+                      onClick={async () => {
+                        triggerHaptic();
+                        if (userId && article) {
+                          const { data, error } = await supabase.from('notifications').insert([
+                            { user_id: userId, title: 'Your requested article is loading', message: article.title, status: 'loading', article_id: article.id, is_read: false }
+                          ]).select();
+                          
+                          if (data) {
+                            setNotificationId(data[0].id);
+                          }
+                          showToast('You will be notified when the data is ready.');
+                          ionRouter.push('/home', 'root');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap shadow-lg border bg-white/30 backdrop-blur-lg text-gray-800 border-white/20"
+                    >
+                      <Bell size={16} className="mr-2" />
+                      Notify me when done
+                    </button>
+                  </motion.div>
+                </div>
+              )}
             </div>
           : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
               <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
@@ -198,8 +257,37 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
             </motion.div>;
       case 'mains':
         return loadingMains
-          ? <div className="flex justify-center items-center h-32">
+          ? <div className="flex flex-col justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+              {showNotifyButton && (
+                <div className="fixed bottom-20 left-0 right-0 flex justify-center">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                  >
+                    <button
+                      onClick={async () => {
+                        triggerHaptic();
+                        if (userId && article) {
+                          const { data, error } = await supabase.from('notifications').insert([
+                            { user_id: userId, title: 'Your requested article is loading', message: article.title, status: 'loading', article_id: article.id, is_read: false }
+                          ]).select();
+
+                          if (data) {
+                            setNotificationId(data[0].id);
+                          }
+                          showToast('You will be notified when the data is ready.');
+                          ionRouter.push('/home', 'root');
+                        }
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-all duration-300 whitespace-nowrap shadow-lg border bg-white/30 backdrop-blur-lg text-gray-800 border-white/20"
+                    >
+                      <Bell size={16} className="mr-2" />
+                      Notify me when done
+                    </button>
+                  </motion.div>
+                </div>
+              )}
             </div>
           : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
               <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
@@ -229,7 +317,13 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
         <div className="relative">
           {/* Header Image and Buttons */}
           <div className="fixed top-0 left-0 right-0 h-96 z-0">
-            <img src={article.image_url} alt={article.title} className="object-cover w-full h-full" />
+            <img
+              src={article.image_url}
+              alt={article.title}
+              className={`object-cover w-full h-full ${
+                article.source === 'Google' ? 'blur-sm brightness-50' : ''
+              }`}
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
             <div className="absolute bottom-24 left-4 right-4 text-white">
               <motion.div

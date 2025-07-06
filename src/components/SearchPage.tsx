@@ -1,24 +1,32 @@
 import { useState, useEffect, useRef } from "react";
 import { IonPage, IonContent } from '@ionic/react';
 import { motion, AnimatePresence } from "framer-motion";
+import { useSearch } from "../context/SearchContext";
 import { FiSearch, FiClock, FiArrowRight, FiLoader } from "react-icons/fi";
 import { supabase } from "../lib/supabaseClient";
 import HistorySidebar from "./HistorySidebar";
 import { Keyboard } from '@capacitor/keyboard';
+import { Capacitor } from '@capacitor/core';
 import { useHaptics } from "../hooks/useHaptics";
 import axios from "axios";
 import config from "../config";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import rehypeRaw from "rehype-raw";
 
 const SearchPage = () => {
+  const {
+    searchQuery,
+    setSearchQuery,
+    relatedTopics,
+    setRelatedTopics,
+    topicDetails,
+    setTopicDetails,
+    loading,
+    setLoading,
+  } = useSearch();
   const [isFocused, setIsFocused] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [relatedTopics, setRelatedTopics] = useState<string[]>([]);
-  const [currentTopicIndex, setCurrentTopicIndex] = useState(0);
-  const [topicDetails, setTopicDetails] = useState<string>("");
-  const [loadingText, setLoadingText] = useState("Understanding search...");
-  const [loading, setLoading] = useState(false);
+  const [currentMessageIndex, setCurrentMessageIndex] = useState(0);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [placeholder, setPlaceholder] = useState("");
   const searchContainerRef = useRef<HTMLDivElement>(null);
@@ -44,7 +52,7 @@ const SearchPage = () => {
   const { triggerHaptic } = useHaptics();
 
   useEffect(() => {
-    if (isFocused) return;
+    if (isFocused || topicDetails || loading) return;
     const type = () => {
       const currentPhrase = placeholders[typingIndex];
       if (charIndex < currentPhrase.length) {
@@ -61,7 +69,7 @@ const SearchPage = () => {
 
     const typingTimeout = setTimeout(type, 100);
     return () => clearTimeout(typingTimeout);
-  }, [charIndex, typingIndex, isFocused]);
+  }, [charIndex, typingIndex, isFocused, topicDetails, loading]);
 
   useEffect(() => {
     const blinkerTimeout = setInterval(() => {
@@ -71,23 +79,26 @@ const SearchPage = () => {
   }, []);
 
   useEffect(() => {
-    if (loading && relatedTopics.length > 0) {
+    if (loading) {
+      const synonyms = ["Analyzing", "Examining", "Exploring", "Investigating", "Reviewing"];
+      const messages = relatedTopics.length > 0
+        ? relatedTopics.map(t => `${synonyms[Math.floor(Math.random() * synonyms.length)]} ${t}`)
+        : [
+            "Understanding search...",
+            "Consulting the archives...",
+            "Analyzing the patterns...",
+            "Connecting the dots...",
+            "Building the context...",
+            "Going through the books...",
+            "Consulting the experts...",
+            "Checking the archives...",
+            "understanding the topic...",
+            "Searching for relevant information...",
+          ];
+
       const interval = setInterval(() => {
-        setCurrentTopicIndex((prevIndex) => (prevIndex + 1) % relatedTopics.length);
-      }, 2000);
-      return () => clearInterval(interval);
-    } else if (loading) {
-      const loadingTexts = [
-        "Understanding search...",
-        "Going through the books...",
-        "Consulting the experts...",
-        "Checking the archives...",
-        "Analyzing the patterns...",
-        "Connecting the dots...",
-        "Building the context...",
-      ];
-      const interval = setInterval(() => {
-        setLoadingText(loadingTexts[Math.floor(Math.random() * loadingTexts.length)]);
+        triggerHaptic();
+        setCurrentMessageIndex(prevIndex => (prevIndex + 1) % messages.length);
       }, 2000);
       return () => clearInterval(interval);
     }
@@ -105,14 +116,23 @@ const SearchPage = () => {
   };
 
   useEffect(() => {
-    document.addEventListener("mousedown", handleClickOutside);
-    const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
-      setIsFocused(false);
-    });
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      keyboardDidHideListener.then(listener => listener.remove());
-    };
+    if (Capacitor.isNativePlatform()) {
+      const keyboardDidShowListener = Keyboard.addListener('keyboardDidShow', () => {
+        setIsFocused(true);
+      });
+      const keyboardDidHideListener = Keyboard.addListener('keyboardDidHide', () => {
+        setIsFocused(false);
+      });
+      return () => {
+        keyboardDidShowListener.then(listener => listener.remove());
+        keyboardDidHideListener.then(listener => listener.remove());
+      };
+    } else {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => {
+        document.removeEventListener("mousedown", handleClickOutside);
+      };
+    }
   }, [searchQuery]);
 
   useEffect(() => {
@@ -280,14 +300,25 @@ const SearchPage = () => {
               <FiLoader className="animate-spin text-2xl text-gray-500 mx-auto" />
               <AnimatePresence mode="wait">
                 <motion.p
-                  key={currentTopicIndex}
+                  key={currentMessageIndex}
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   exit={{ opacity: 0 }}
                   transition={{ duration: 0.5 }}
                   className="text-center mt-2"
                 >
-                  {relatedTopics.length > 0 ? `going through ${relatedTopics[currentTopicIndex]}` : loadingText}
+                  {(relatedTopics.length > 0
+                    ? relatedTopics.map(t => `going through ${t}`)
+                    : [
+                        "Understanding search...",
+                        "Going through the books...",
+                        "Consulting the experts...",
+                        "Checking the archives...",
+                        "Analyzing the patterns...",
+                        "Connecting the dots...",
+                        "Building the context...",
+                      ]
+                  )[currentMessageIndex]}
                 </motion.p>
               </AnimatePresence>
             </motion.div>
@@ -300,13 +331,14 @@ const SearchPage = () => {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
-              className="mt-4 w-full max-w-md"
+              className="mt-4 w-full max-w-md pb-20"
             >
               <div className="prose max-w-none">
                 <ReactMarkdown
                   remarkPlugins={[remarkGfm]}
+                  rehypePlugins={[rehypeRaw]}
                   components={{
-                    table: ({ node, ...props }) => <table className="w-full border-collapse border border-gray-300" {...props} />,
+                    table: ({ node, ...props }) => <div className="overflow-x-auto"><table className="w-full border-collapse border border-gray-300" {...props} /></div>,
                     th: ({ node, ...props }) => <th className="border border-gray-300 px-4 py-2 bg-gray-100" {...props} />,
                     td: ({ node, ...props }) => <td className="border border-gray-300 px-4 py-2" {...props} />,
                     h1: ({ node, ...props }) => <h1 className="text-2xl font-bold my-4" {...props} />,

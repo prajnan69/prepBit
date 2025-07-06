@@ -49,6 +49,8 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (session) {
       fetchProfile();
+    } else {
+      setProfile(null);
     }
   }, [session]);
 

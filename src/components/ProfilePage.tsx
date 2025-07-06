@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { IonPage, IonContent, useIonRouter } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter, useIonViewWillEnter } from '@ionic/react';
 import { useProfile } from '../context/ProfileContext';
 import {
   User,
@@ -8,14 +8,7 @@ import {
   ChevronRight,
   LogOut,
   HelpCircle,
-  ChevronDown,
-  Book,
-  MapPin,
-  Mail,
-  Bug,
-  MessageSquare,
-  AlertTriangle
-} from 'lucide-react';
+  Book} from 'lucide-react';
 import { useColor } from 'color-thief-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHaptics } from '../hooks/useHaptics';
@@ -38,15 +31,16 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
   const ionRouter = useIonRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { triggerHaptic } = useHaptics();
-  const [showHoldIndicator, setShowHoldIndicator] = useState(true);
+  const [showHoldIndicator, setShowHoldIndicator] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
-  useEffect(() => {
+  useIonViewWillEnter(() => {
+    setShowHoldIndicator(true);
     const timer = setTimeout(() => {
       setShowHoldIndicator(false);
     }, 3000);
     return () => clearTimeout(timer);
-  }, []);
+  });
 
   useEffect(() => {
     if (color) {
@@ -116,14 +110,6 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
   const handleLogout = async () => {
     await supabase.auth.signOut();
   };
-
-  if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    );
-  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -215,9 +201,11 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0, transition: { duration: 1 } }}
-                    className="absolute inset-0 bg-black/20 rounded-full flex items-center justify-center"
+                    className={`absolute inset-0 rounded-full flex items-center justify-center z-10 ${
+                      profile?.avatar_url ? 'bg-black/20' : ''
+                    }`}
                   >
-                    <p className="text-white text-xs">Hold to change</p>
+                    <p className={`text-xs ${profile?.avatar_url ? 'text-white' : 'text-black'}`}>Hold to change</p>
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -252,6 +240,12 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
                 bg="bg-green-100" 
                 label="Read Later" 
                 onClick={() => ionRouter.push('/read-later', 'forward', 'push')}
+              />
+              <Item 
+                icon={<Book size={20} className="text-yellow-500" />} 
+                bg="bg-yellow-100" 
+                label="Bookmarks" 
+                onClick={() => ionRouter.push('/bookmarks', 'forward', 'push')}
               />
               <div className="pt-2">
                 <Item 

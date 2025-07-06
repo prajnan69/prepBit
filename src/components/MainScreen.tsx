@@ -2,7 +2,8 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { supabase } from '../lib/supabaseClient';
 import config from '../config';
-import { IonPage, IonContent, useIonRouter, useIonViewWillEnter, IonInfiniteScroll, IonInfiniteScrollContent, IonRefresher, IonRefresherContent } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter, useIonViewWillEnter, IonRefresher, IonRefresherContent, IonButton } from '@ionic/react';
+import { useIntersectionObserver } from '../hooks/useIntersectionObserver';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiBell, FiBookmark, FiFilter } from 'react-icons/fi';
 import { GraduationCap, Heart, Landmark, Leaf, Scale, Cpu } from 'lucide-react';
@@ -37,13 +38,32 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
   const [hasUnread, setHasUnread] = useState(false);
   const [news, setNews] = useState<any[]>([]);
   const [filteredNews, setFilteredNews] = useState<any[]>([]);
+  const [groupedNews, setGroupedNews] = useState<any>({});
   const [loading, setLoading] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [hidden, setHidden] = useState(false);
   const ionRouter = useIonRouter();
   const width = useScreenWidth();
   const contentRef = useRef<HTMLIonContentElement>(null);
-  const { triggerHaptic, triggerRefreshHaptic } = useHaptics();
+  const { triggerHaptic, triggerRefreshHaptic, triggerArticleLoadHaptic } = useHaptics();
+  const { ref, isIntersecting } = useIntersectionObserver({ threshold: 0.5, rootMargin: '200px' });
+
+  const checkNotifications = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data, error } = await supabase
+        .from('notifications')
+        .select('is_read')
+        .eq('user_id', user.id)
+        .eq('is_read', false);
+      if (data && data.length > 0) {
+        setHasUnread(true);
+      } else {
+        setHasUnread(false);
+      }
+    }
+  };
 
   const fetchNews = useCallback(async (event?: any) => {
     setLoading(true);
@@ -56,7 +76,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
       });
       setNews(response.data);
       setFilteredNews(response.data);
-      triggerRefreshHaptic();
+      triggerArticleLoadHaptic();
     } catch (error) {
       console.error('Error fetching news:', error);
       if (axios.isAxiosError(error)) {
@@ -70,6 +90,10 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
     }
   }, []);
 
+  useIonViewWillEnter(() => {
+    checkNotifications();
+  });
+
   useEffect(() => {
     if (activeTab === 'daily-update') {
       fetchNews();
@@ -77,21 +101,23 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
   }, [activeTab, fetchNews]);
 
   useEffect(() => {
-    const checkNotifications = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data, error } = await supabase
-          .from('notifications')
-          .select('is_read')
-          .eq('user_id', user.id)
-          .eq('is_read', false);
-        if (data && data.length > 0) {
-          setHasUnread(true);
-        }
-      }
-    };
     checkNotifications();
+
+    const channel = supabase
+      .channel('public:notifications')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'notifications' }, checkNotifications)
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
+
+  useEffect(() => {
+    if (isIntersecting && hasMore && !loadingMore) {
+      fetchMoreNews(null);
+    }
+  }, [isIntersecting]);
 
   useEffect(() => {
     let filtered = news;
@@ -99,6 +125,46 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
       filtered = filtered.filter(article => article.is_important);
     }
     setFilteredNews(filtered);
+
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    const todayStr = today.toDateString();
+    const yesterdayStr = yesterday.toDateString();
+
+    const groups = filtered.reduce?.((acc, article) => {
+  const articleDate = new Date(article.published_at).toDateString();
+  let groupName;
+
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+
+  const todayStr = today.toDateString();
+  const yesterdayStr = yesterday.toDateString();
+
+  if (articleDate === todayStr) {
+    groupName = 'Today';
+  } else if (articleDate === yesterdayStr) {
+    groupName = 'Yesterday';
+  } else {
+    groupName = new Date(article.published_at).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+  }
+
+  if (!acc[groupName]) {
+    acc[groupName] = [];
+  }
+  acc[groupName].push(article);
+  return acc;
+}, {}) ?? {};
+  
+
+    setGroupedNews(groups);
   }, [showImportant, news]);
 
   const fetchMoreNews = async (event: any) => {
@@ -111,8 +177,12 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
           Authorization: `Bearer ${token}`,
         },
       });
-      setNews(prevNews => [...prevNews, ...response.data]);
-      setFilteredNews(prevNews => [...prevNews, ...response.data]);
+      if (response.data.length === 0) {
+        setHasMore(false);
+      } else {
+        setNews(prevNews => [...prevNews, ...response.data]);
+        setFilteredNews(prevNews => [...prevNews, ...response.data]);
+      }
       event.target.complete();
     } catch (error) {
       console.error('Error fetching more news:', error);
@@ -120,15 +190,13 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
         console.error('Axios error details:', error.response?.data);
       }
     } finally {
-      setTimeout(() => {
-        setLoadingMore(false);
-      }, 500);
+      setLoadingMore(false);
     }
   };
 
 
   const SkeletonLoader = () => (
-    <div className="px-4 pt-4 pb-28 space-y-4">
+                  <div className="px-4 pt-4 pb-16 space-y-4">
       {[...Array(5)].map((_, i) => (
         <div key={i} className="bg-white p-4 rounded-2xl shadow-md border animate-pulse">
           <div className="flex gap-4 items-start">
@@ -173,7 +241,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
           </div>
           <div className="px-4 pt-4">
             <div className="flex bg-gray-100 p-1 rounded-full">
-              <div className="relative w-3/4">
+              <div className="relative w-3/5">
                 <button
                   onClick={() => {
                     triggerHaptic();
@@ -193,7 +261,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
                   />
                 )}
               </div>
-              <div className="relative w-1/4">
+              <div className="relative w-2/5">
                 <button
                   onClick={() => {
                     triggerHaptic();
@@ -220,7 +288,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
             </div>
           </div>
         </header>
-        <main>
+        <main className="pb-4">
           <AnimatePresence mode="wait">
               <motion.div
                 key={activeTab}
@@ -234,27 +302,34 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
                     {loading ? (
                       <SkeletonLoader />
                     ) : filteredNews.length > 0 ? (
-                      <motion.div
-                        variants={{
-                          hidden: { opacity: 0 },
-                          show: {
-                            opacity: 1,
-                            transition: {
-                              staggerChildren: 0.07,
-                            },
-                          },
-                        }}
-                        initial="hidden"
-                        animate="show"
-                      >
-                        {filteredNews.map((article) => (
-                          <ArticleCard
-                            key={article.id}
-                            article={article}
-                            showToast={showToast}
-                          />
+                      <div>
+                        {Object.entries(groupedNews).map(([groupName, articles]) => (
+                          <div key={groupName}>
+                            <h2 className="text-lg font-bold text-gray-800 my-4">{groupName}</h2>
+                            <motion.div
+                              variants={{
+                                hidden: { opacity: 0 },
+                                show: {
+                                  opacity: 1,
+                                  transition: {
+                                    staggerChildren: 0.07,
+                                  },
+                                },
+                              }}
+                              initial="hidden"
+                              animate="show"
+                            >
+                              {(articles as any[]).map((article) => (
+                                <ArticleCard
+                                  key={article.id}
+                                  article={article}
+                                  showToast={showToast}
+                                />
+                              ))}
+                            </motion.div>
+                          </div>
                         ))}
-                      </motion.div>
+                      </div>
                     ) : (
                       <div className="h-full flex items-center justify-center text-gray-500 pt-16">
                         <p>No articles match your selected filters.</p>
@@ -268,18 +343,17 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
                 )}
               </motion.div>
             </AnimatePresence>
+            {!loading && hasMore && (
+              <div ref={ref} className="flex justify-center my-4">
+                {loadingMore && (
+                  <div className="flex items-center space-x-2">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                    <span className="text-gray-500 animate-pulse">PrepBit</span>
+                  </div>
+                )}
+              </div>
+            )}
           </main>
-        <IonInfiniteScroll
-          onIonInfinite={fetchMoreNews}
-          threshold="100px"
-          disabled={loadingMore}
-        >
-          <IonInfiniteScrollContent
-            loadingSpinner="bubbles"
-            loadingText="Loading more data..."
-          >
-          </IonInfiniteScrollContent>
-        </IonInfiniteScroll>
         <AnimatePresence>
           {isFilterDrawerOpen && (
             <motion.div

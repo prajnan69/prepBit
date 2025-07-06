@@ -12,17 +12,7 @@ export const useHaptics = () => {
   };
 
   const triggerRefreshHaptic = async () => {
-    const platform = Capacitor.getPlatform();
-    if (platform === 'android') {
-      for (let i = 0; i < 3; i++) {
-        await Haptics.vibrate({ duration: 15 });
-        if (i < 2) {
-          await new Promise(resolve => setTimeout(resolve, 50));
-        }
-      }
-    } else {
-      await Haptics.impact({ style: ImpactStyle.Medium });
-    }
+    await Haptics.impact({ style: ImpactStyle.Medium });
   };
 
   const triggerErrorHaptic = async () => {
@@ -34,5 +24,18 @@ export const useHaptics = () => {
     }
   };
 
-  return { triggerHaptic, triggerRefreshHaptic, triggerErrorHaptic };
+  const triggerArticleLoadHaptic = async () => {
+    const platform = Capacitor.getPlatform();
+    if (platform === 'android') {
+      for (let i = 0; i < 3; i++) {
+        await Haptics.vibrate({ duration: 15 });
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
+    } else {
+      // iOS doesn't support custom vibration patterns, so we'll use a light impact.
+      await Haptics.impact({ style: ImpactStyle.Light });
+    }
+  };
+
+  return { triggerHaptic, triggerRefreshHaptic, triggerErrorHaptic, triggerArticleLoadHaptic };
 };

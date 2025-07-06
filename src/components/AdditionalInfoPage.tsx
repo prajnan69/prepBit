@@ -88,7 +88,7 @@ const AdditionalInfoPage = () => {
       if (error) {
         setError(error.message);
       } else {
-        ionRouter.push('/');
+        ionRouter.push('/time-selection');
       }
     } else {
       setError('You must be logged in to complete your profile.');

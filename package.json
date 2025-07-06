@@ -15,13 +15,16 @@
     "node": "22.16.0"
   },
   "dependencies": {
+    "@capacitor-firebase/analytics": "^7.2.0",
     "@capacitor/android": "^7.4.0",
+    "@capacitor/app": "^7.0.1",
     "@capacitor/camera": "^7.0.1",
     "@capacitor/cli": "^7.4.0",
     "@capacitor/core": "^7.4.0",
     "@capacitor/haptics": "^7.0.1",
     "@capacitor/ios": "^7.4.0",
     "@capacitor/keyboard": "^7.0.1",
+    "@capacitor/push-notifications": "^7.0.1",
     "@capacitor/status-bar": "^7.0.1",
     "@emotion/is-prop-valid": "^1.3.1",
     "@headlessui/react": "^2.2.4",
@@ -30,6 +33,9 @@
     "@ionic/react-router": "^8.6.2",
     "@squareetlabs/capacitor-navigation-bar": "^1.1.0",
     "@supabase/supabase-js": "^2.50.0",
+    "@tsparticles/all": "^3.8.1",
+    "@tsparticles/engine": "^3.8.1",
+    "@tsparticles/react": "^3.0.0",
     "axios": "^1.10.0",
     "color-thief-react": "^2.1.0",
     "framer-motion": "^12.18.1",
@@ -38,6 +44,8 @@
     "react-dom": "^19.1.0",
     "react-icons": "^5.5.0",
     "react-markdown": "^10.1.0",
+    "react-parallax-tilt": "^1.7.299",
+    "rehype-raw": "^7.0.0",
     "remark-gfm": "^4.0.1"
   },
   "devDependencies": {

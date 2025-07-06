@@ -10,6 +10,7 @@ import {
   bookmarkOutline,
   personOutline,
   home,
+  timerOutline,
 } from 'ionicons/icons';
 import { motion, useMotionValue, animate, useTransform } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
@@ -21,6 +22,7 @@ import ProfilePage from './ProfilePage';
 import BookmarksPage from './BookmarksPage';
 import ReadLaterPage from './ReadLaterPage';
 import SearchPage from './SearchPage';
+import BacktrackPage from './BacktrackPage';
 import ArticlePage from './ArticlePage';
 import NotificationsPage from './NotificationsPage';
 import MyProfileDetailsPage from './MyProfileDetailsPage';
@@ -48,7 +50,7 @@ const Tabs = ({
   const tabs = [
     { id: 'home', path: '/home', icon: home, label: 'Home' },
     { id: 'search', path: '/search', icon: searchOutline, label: 'Search' },
-    { id: 'bookmarks', path: '/bookmarks', icon: bookmarkOutline, label: 'Bookmarks' },
+    { id: 'backtrack', path: '/backtrack', icon: timerOutline, label: 'Backtrack' },
     { id: 'profile', path: '/profile', icon: personOutline, label: 'Profile' },
   ];
 
@@ -62,7 +64,7 @@ const Tabs = ({
   }, [location.pathname, tabs]);
 
   const indicatorX = useMotionValue(0);
-  const indicatorWidth = 90; // Increased width for the pill
+  const indicatorWidth = 85; // Increased width for the pill
 
   useEffect(() => {
     if (initialLoad) return;
@@ -80,6 +82,7 @@ const Tabs = ({
       <IonRouterOutlet>
         <Route path="/home" render={() => <MainScreen examType={examType} showToast={showToast} />} exact />
         <Route path="/search" render={() => <SearchPage />} exact />
+        <Route path="/backtrack" render={() => <BacktrackPage />} exact />
         <Route path="/bookmarks" render={() => <BookmarksPage showToast={showToast} />} exact />
         <Route path="/read-later" render={() => <ReadLaterPage showToast={showToast} />} exact />
         <Route path="/profile" render={() => <ProfilePage setSupportDrawer={setSupportDrawer} />} exact />
@@ -100,9 +103,6 @@ const Tabs = ({
               transition={{ type: 'spring', stiffness: 150, damping: 20 }}
             />
             {tabs.map((tab, index) => {
-              if (tab.id === 'bookmarks' && screenWidth <= 380) {
-                return null;
-              }
               return (
                 <TabButton
                   key={tab.id}
