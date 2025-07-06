@@ -4,8 +4,11 @@ import { Haptics, ImpactStyle } from '@capacitor/haptics';
 export const useHaptics = () => {
   const triggerHaptic = async () => {
     const platform = Capacitor.getPlatform();
-    if (platform === 'android') {
-      await Haptics.vibrate({ duration: 15 });
+    if (platform !== 'ios') {
+      for (let i = 0; i < 3; i++) {
+        await Haptics.vibrate({ duration: 15 });
+        await new Promise(resolve => setTimeout(resolve, 50));
+      }
     } else {
       await Haptics.impact({ style: ImpactStyle.Medium });
     }
