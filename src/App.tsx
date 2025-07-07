@@ -13,12 +13,14 @@ import LoginPage from './components/LoginPage';
 import AdditionalInfoPage from './components/AdditionalInfoPage';
 import TimeSelectionPage from './components/TimeSelectionPage';
 import PlayStoreRedirectPage from './components/PlayStoreRedirectPage';
+import SubscriptionPage from './components/SubscriptionPage';
+import InactiveSubscriptionPage from './components/InactiveSubscriptionPage';
 import Toast from './components/Toast';
 import Tabs from './components/Tabs';
 import SupportDrawer from './components/SupportDrawer';
-import ArticlePage from './components/ArticlePage';
 import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import DeleteAccountPage from './components/DeleteAccountPage';
+import SubscriptionRoute from './components/SubscriptionRoute';
 import { useAuth } from './hooks/useAuth';
 import NotificationToast from './components/NotificationToast';
 
@@ -37,7 +39,7 @@ import PrivateRoute from './components/PrivateRoute';
 setupIonicReact();
 
 const App = () => {
-  const { session, loading } = useAuth();
+  const { session } = useAuth();
   const ionRouter = useIonRouter();
 
   useEffect(() => {
@@ -48,7 +50,7 @@ const App = () => {
 
   useEffect(() => {
     const addListener = async () => {
-      const listener = await CapacitorApp.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
+      const listener = await CapacitorApp.addListener('backButton', () => {
         if (ionRouter.canGoBack()) {
           ionRouter.goBack();
         } else {
@@ -150,11 +152,11 @@ const App = () => {
               <Route path="/additional-info" component={AdditionalInfoPage} exact />
               <Route path="/time-selection" component={TimeSelectionPage} exact />
               <Route path="/install" component={PlayStoreRedirectPage} exact />
-              <Route path="/" render={() => (
-                <PrivateRoute>
-                  <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />
-                </PrivateRoute>
-              )} />
+              <Route path="/subscribe" component={SubscriptionPage} exact />
+              <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
+              <PrivateRoute>
+                <SubscriptionRoute path="/" component={() => <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />} />
+              </PrivateRoute>
             </Switch>
           </IonRouterOutlet>
         </IonReactRouter>

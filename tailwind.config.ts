@@ -20,6 +20,8 @@ const config: Config = {
         'pulse-button': 'pulse 2s ease-in-out infinite',
         shake: 'shake 0.4s ease-in-out',
         glow: 'glow 2s ease-in-out infinite alternate',
+        // --- ADD THIS NEW ANIMATION ---
+        'subtle-glow-shadow': 'subtle-glow-shadow 6s ease-in-out infinite alternate',
       },
       keyframes: {
         float: {
@@ -38,6 +40,11 @@ const config: Config = {
         glow: {
           '0%': { textShadow: '0 0 5px rgba(79, 70, 229, 0.5)' },
           '100%': { textShadow: '0 0 15px rgba(249, 115, 22, 0.8)' },
+        },
+        // --- ADD THESE NEW KEYFRAMES ---
+        'subtle-glow-shadow': {
+          '0%': { boxShadow: '0 10px 40px rgba(79, 70, 229, 0.4)' },
+          '100%': { boxShadow: '0 10px 50px rgba(249, 115, 22, 0.3)' },
         },
       },
     },

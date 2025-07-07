@@ -9,6 +9,7 @@ interface Profile {
   avatar_url: string;
   exam: string;
   state: string;
+  subscription_status: string;
 }
 
 interface ProfileContextType {

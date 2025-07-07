@@ -8,12 +8,14 @@ import {
   ChevronRight,
   LogOut,
   HelpCircle,
-  Book} from 'lucide-react';
+  Book,
+  Star} from 'lucide-react';
 import { useColor } from 'color-thief-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHaptics } from '../hooks/useHaptics';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { Browser } from '@capacitor/browser';
 
 const getContrastColor = (hex: string) => {
   if (!hex) return '#000000';
@@ -24,8 +26,8 @@ const getContrastColor = (hex: string) => {
   return (yiq >= 128) ? '#000000' : '#ffffff';
 };
 
-const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { isOpen: boolean; type: 'bug' | 'feedback' | 'urgent' | null }) => void }) => {
-  const { profile, loading, refetchProfile } = useProfile();
+const ProfilePage = () => {
+  const { profile, refetchProfile } = useProfile();
   const { data: color } = useColor(profile?.avatar_url || '', 'hex', { crossOrigin: 'anonymous' });
   const [background, setBackground] = useState('linear-gradient(to bottom, #ffffff 0%, #ffffff 100%)');
   const ionRouter = useIonRouter();
@@ -111,23 +113,7 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
     await supabase.auth.signOut();
   };
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    visible: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1,
-      },
-    },
-  };
 
-  const itemVariants = {
-    hidden: { y: 20, opacity: 0 },
-    visible: {
-      y: 0,
-      opacity: 1,
-    },
-  };
 
   return (
     <IonPage>
@@ -159,8 +145,13 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
                     exit={{ opacity: 0, transition: { duration: 0.5 } }}
                   />
                 ) : (
-                  <div className="flex items-center justify-center w-full h-full">
-                    <User size={60} className="text-green-900" />
+                  <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                    <span className="text-4xl font-bold text-gray-600">
+                      {profile?.full_name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')}
+                    </span>
                   </div>
                 )}
               </AnimatePresence>
@@ -221,6 +212,44 @@ const ProfilePage = ({ setSupportDrawer }: { setSupportDrawer: (drawerState: { i
             animate={{ y: 0, opacity: 1 }}
             transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}
           >
+            <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-6 space-y-3 mb-4">
+              {Capacitor.isNativePlatform() ? (
+                <Item
+                  icon={<Star size={20} className="text-yellow-500" />}
+                  bg="bg-yellow-100"
+                  label="Manage Account"
+                  onClick={async () => {
+                    const { data: { session } } = await supabase.auth.getSession();
+                    if (session) {
+                      const url = `https://prepbit.academy/profile?token=${session.access_token}`;
+                      await Browser.open({ url });
+                    }
+                  }}
+                />
+              ) : (
+                <div className="pt-2">
+                  <button
+                    onClick={async () => {
+                      const { data: { session } } = await supabase.auth.getSession();
+                      if (session) {
+                        ionRouter.push(`/subscribe?token=${session.access_token}`);
+                      }
+                    }}
+                    className="w-full py-3 px-4 rounded-xl text-black font-semibold flex justify-between items-center"
+                    // style={{ background: 'linear-gradient(to right, #8A2BE2, #FFA500)' }}
+                  >
+                    <span>Manage Subscription</span>
+                    <span
+                      className={`text-white text-xs font-normal py-1 px-3 rounded-full ${
+                        profile?.subscription_status === 'active' ? 'bg-green-500' : 'bg-red-500'
+                      }`}
+                    >
+                      {profile?.subscription_status}
+                    </span>
+                  </button>
+                </div>
+              )}
+            </div>
             <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-6 space-y-3">
               <Item
                 icon={<User size={20} className="text-blue-500" />}
@@ -291,14 +320,5 @@ const Item = ({ icon, bg, label, value, onClick }: { icon: React.ReactNode, bg: 
   );
 };
 
-const InfoRow = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string }) => (
-  <div className="flex items-center justify-between text-sm px-2 py-1">
-    <div className="flex items-center space-x-2 text-gray-600">
-      {icon}
-      <span>{label}</span>
-    </div>
-    <span className="text-gray-800 font-medium">{value}</span>
-  </div>
-);
 
 export default ProfilePage;

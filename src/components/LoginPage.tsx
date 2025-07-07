@@ -11,7 +11,7 @@ import type { PluginListenerHandle } from '@capacitor/core';
 const LoginPage = () => {
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [, setError] = useState<string | null>(null);
   const [otpSent, setOtpSent] = useState(false);
   const [otpStatus, setOtpStatus] = useState<'default' | 'error' | 'success'>('default');
   const [isVerifying, setIsVerifying] = useState(false);
@@ -76,7 +76,7 @@ const LoginPage = () => {
     setIsVerifying(true);
 
     if (phone === '9876543210' && otpToVerify === '123456') {
-      const { data, error } = await supabase.auth.signInWithPassword({
+      const { error } = await supabase.auth.signInWithPassword({
         email: 'testuser@example.com',
         password: 'testuserpassword',
       });
