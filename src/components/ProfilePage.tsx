@@ -1,6 +1,8 @@
+// src/pages/ProfilePage.tsx
+
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabaseClient';
 import { IonPage, IonContent, useIonRouter, useIonViewWillEnter } from '@ionic/react';
+import { supabase } from '../lib/supabaseClient';
 import { useProfile } from '../context/ProfileContext';
 import {
   User,
@@ -9,13 +11,15 @@ import {
   LogOut,
   HelpCircle,
   Book,
-  Star} from 'lucide-react';
+  Star
+} from 'lucide-react';
 import { useColor } from 'color-thief-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useHaptics } from '../hooks/useHaptics';
 import { Capacitor } from '@capacitor/core';
 import { Camera, CameraResultType, CameraSource } from '@capacitor/camera';
 import { Browser } from '@capacitor/browser';
+import config from '../config';
 
 const getContrastColor = (hex: string) => {
   if (!hex) return '#000000';
@@ -24,6 +28,21 @@ const getContrastColor = (hex: string) => {
   const b = parseInt(hex.slice(5, 7), 16);
   const yiq = ((r * 299) + (g * 587) + (b * 114)) / 1000;
   return (yiq >= 128) ? '#000000' : '#ffffff';
+};
+
+const verifyTokenWithBackend = async (token: string) => {
+  try {
+    const res = await fetch(`${config.API_BASE_URL}/verify-token`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await res.json();
+    return data.valid ? data.user : null;
+  } catch (err) {
+    console.error('Token verification error:', err);
+    return null;
+  }
 };
 
 const ProfilePage = () => {
@@ -36,11 +55,54 @@ const ProfilePage = () => {
   const [showHoldIndicator, setShowHoldIndicator] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
 
+  useEffect(() => {
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
+
+  const restoreSession = async () => {
+    if (token) {
+      try {
+        const { error } = await supabase.auth.setSession({
+          access_token: token,
+          refresh_token: ''
+        });
+
+        if (!error) {
+          console.log('✅ Session restored from token');
+          localStorage.setItem('prepbit_token', token);
+          refetchProfile();
+          const { data: sessionData } = await supabase.auth.getSession();
+          console.log('✅ Active session:', sessionData);
+          window.history.replaceState(null, '', '/profile');
+        } else {
+          console.error('❌ Failed to set session:', error);
+        }
+      } catch (err) {
+        console.error('Exception while setting session:', err);
+      }
+    } else {
+      const savedToken = localStorage.getItem('prepbit_token');
+      if (savedToken) {
+        const { error } = await supabase.auth.setSession({
+          access_token: savedToken,
+          refresh_token: ''
+        });
+        if (!error) {
+          console.log('✅ Session restored from localStorage');
+          refetchProfile();
+        }
+      }
+    }
+  };
+
+  restoreSession();
+}, []);
+
+
+
   useIonViewWillEnter(() => {
     setShowHoldIndicator(true);
-    const timer = setTimeout(() => {
-      setShowHoldIndicator(false);
-    }, 3000);
+    const timer = setTimeout(() => setShowHoldIndicator(false), 3000);
     return () => clearTimeout(timer);
   });
 
@@ -51,40 +113,28 @@ const ProfilePage = () => {
   }, [color]);
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (!event.target.files || event.target.files.length === 0) {
-      return;
-    }
-    const file = event.target.files[0];
-    uploadAvatar(file);
+    if (!event.target.files?.length) return;
+    uploadAvatar(event.target.files[0]);
   };
 
   const uploadAvatar = async (file: File | Blob) => {
-    if (!profile || !profile.id) return;
+    if (!profile?.id) return;
     setIsUploading(true);
     const fileExt = file.type.split('/')[1];
     const fileName = `${profile.id}.${fileExt}`;
-    const filePath = `${fileName}`;
+    const filePath = fileName;
 
-    let { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, {
-      upsert: true,
-    });
-
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
     if (uploadError) {
-      console.error('Error uploading avatar:', uploadError);
+      console.error('Upload error:', uploadError);
+      setIsUploading(false);
       return;
     }
 
     const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-
-    const url = `${publicUrl}?t=${new Date().getTime()}`;
-    const { error: updateError } = await supabase
-      .from('profiles')
-      .update({ avatar_url: url })
-      .eq('id', profile.id);
-
-    if (updateError) {
-      console.error('Error updating avatar url:', updateError);
-    } else {
+    const url = `${publicUrl}?t=${Date.now()}`;
+    const { error: updateError } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', profile.id);
+    if (!updateError) {
       refetchProfile();
     }
     setIsUploading(false);
@@ -92,17 +142,21 @@ const ProfilePage = () => {
 
   const handleEditAvatar = async () => {
     if (Capacitor.isNativePlatform()) {
-      const image = await Camera.getPhoto({
-        quality: 90,
-        allowEditing: false,
-        resultType: CameraResultType.Uri,
-        source: CameraSource.Photos,
-      });
+      try {
+        const image = await Camera.getPhoto({
+          quality: 90,
+          allowEditing: false,
+          resultType: CameraResultType.Uri,
+          source: CameraSource.Photos,
+        });
 
-      if (image.webPath) {
-        const response = await fetch(image.webPath);
-        const blob = await response.blob();
-        uploadAvatar(blob);
+        if (image.webPath) {
+          const response = await fetch(image.webPath);
+          const blob = await response.blob();
+          uploadAvatar(blob);
+        }
+      } catch {
+        console.info('User cancelled photo picker');
       }
     } else {
       fileInputRef.current?.click();
@@ -110,70 +164,37 @@ const ProfilePage = () => {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem('prepbit_token');
     await supabase.auth.signOut();
+    ionRouter.push('/login');
   };
-
-
 
   return (
     <IonPage>
       <IonContent>
-        <motion.div
-          className="min-h-screen flex flex-col overflow-hidden"
-          animate={{ background }}
-          transition={{ duration: 1 }}
-        >
+        <motion.div className="min-h-screen flex flex-col overflow-hidden" animate={{ background }} transition={{ duration: 1 }}>
           <div className="flex-shrink-0 pt-28 pb-8 flex flex-col items-center">
-            <motion.div
-              className="relative w-32 h-32 rounded-full bg-white border-4 shadow-lg overflow-hidden"
-              animate={{ borderColor: color || '#a7f3d0' }}
-              transition={{ duration: 1 }}
-            >
+            <motion.div className="relative w-32 h-32 rounded-full bg-white border-4 shadow-lg overflow-hidden" animate={{ borderColor: color || '#a7f3d0' }} transition={{ duration: 1 }}>
               <AnimatePresence>
                 {isUploading ? (
                   <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                   </div>
                 ) : profile?.avatar_url ? (
-                  <motion.img
-                    key={profile.avatar_url}
-                    src={profile.avatar_url}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, transition: { duration: 0.5 } }}
-                  />
+                  <motion.img key={profile.avatar_url} src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
                 ) : (
                   <div className="flex items-center justify-center w-full h-full bg-gray-200">
-                    <span className="text-4xl font-bold text-gray-600">
-                      {profile?.full_name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')}
-                    </span>
+                    <span className="text-4xl font-bold text-gray-600">{(profile?.full_name || 'A').split(' ').map(n => n[0]).join('')}</span>
                   </div>
                 )}
               </AnimatePresence>
-              <input
-                type="file"
-                ref={fileInputRef}
-                onChange={handleAvatarChange}
-                className="hidden"
-                accept="image/*"
-              />
+              <input type="file" ref={fileInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
             </motion.div>
+
             <motion.div
               onTapStart={() => {
-                const timer = setTimeout(() => {
-                  handleEditAvatar();
-                }, 500);
-                (window as any).holdTimer = timer;
-
-                const interval = setInterval(() => {
-                  triggerHaptic();
-                }, 100);
-                (window as any).vibrationInterval = interval;
+                (window as any).holdTimer = setTimeout(() => handleEditAvatar(), 500);
+                (window as any).vibrationInterval = setInterval(() => triggerHaptic(), 100);
               }}
               onTapCancel={() => {
                 clearTimeout((window as any).holdTimer);
@@ -188,101 +209,50 @@ const ProfilePage = () => {
             >
               <AnimatePresence>
                 {showHoldIndicator && (
-                  <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, transition: { duration: 1 } }}
-                    className={`absolute inset-0 rounded-full flex items-center justify-center z-10 ${
-                      profile?.avatar_url ? 'bg-black/20' : ''
-                    }`}
-                  >
+                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`absolute inset-0 rounded-full flex items-center justify-center z-10 ${profile?.avatar_url ? 'bg-black/20' : ''}`}>
                     <p className={`text-xs ${profile?.avatar_url ? 'text-white' : 'text-black'}`}>Hold to change</p>
                   </motion.div>
                 )}
               </AnimatePresence>
             </motion.div>
-            <div className="text-center">
-              <h1 style={{ color: getContrastColor(color || '#ffffff') }} className="text-2xl font-bold">{profile?.full_name || 'Aspirant'}</h1>
+
+            <div className="text-center mt-4">
+              <h1 style={{ color: getContrastColor(color || '#ffffff') }} className="text-2xl font-bold">
+                {profile?.full_name || 'Aspirant'}
+              </h1>
             </div>
           </div>
 
-          <motion.div
-            className="flex-grow px-2 pb-8"
-            initial={{ y: 100, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}
-          >
-            <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-6 space-y-3 mb-4">
-              {Capacitor.isNativePlatform() ? (
-                <Item
-                  icon={<Star size={20} className="text-yellow-500" />}
-                  bg="bg-yellow-100"
-                  label="Manage Account"
-                  onClick={async () => {
-                    const { data: { session } } = await supabase.auth.getSession();
-                    if (session) {
-                      const url = `https://prepbit.academy/profile?token=${session.access_token}`;
-                      await Browser.open({ url });
-                    }
-                  }}
-                />
-              ) : (
-                <div className="pt-2">
-                  <button
-                    onClick={async () => {
-                      const { data: { session } } = await supabase.auth.getSession();
-                      if (session) {
-                        ionRouter.push(`/subscribe?token=${session.access_token}`);
-                      }
-                    }}
-                    className="w-full py-3 px-4 rounded-xl text-black font-semibold flex justify-between items-center"
-                    // style={{ background: 'linear-gradient(to right, #8A2BE2, #FFA500)' }}
-                  >
-                    <span>Manage Subscription</span>
-                    <span
-                      className={`text-white text-xs font-normal py-1 px-3 rounded-full ${
-                        profile?.subscription_status === 'active' ? 'bg-green-500' : 'bg-red-500'
-                      }`}
-                    >
-                      {profile?.subscription_status}
-                    </span>
-                  </button>
-                </div>
-              )}
-            </div>
-            <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-6 space-y-3">
+          <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
+            <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 mb-4">
               <Item
-                icon={<User size={20} className="text-blue-500" />}
-                bg="bg-blue-100" 
-                label="My Profile"
-                value={profile?.username}
-                onClick={() => ionRouter.push('/profile/details')}
+                icon={<Star size={20} className="text-yellow-500" />}
+                bg="bg-yellow-100"
+                label="Manage Account"
+                onClick={async () => {
+                  const { data: { session } } = await supabase.auth.getSession();
+                  const token = session?.access_token;
+                  if (token) {
+                    const verified = await verifyTokenWithBackend(token);
+                    if (verified) {
+                      await Browser.open({ url: `${config.API_BASE_URL}/profile?token=${token}`, presentationStyle: 'popover' });
+                    } else {
+                      ionRouter.push('/login');
+                    }
+                  } else {
+                    ionRouter.push('/login');
+                  }
+                }}
               />
-              <Item 
-                icon={<HelpCircle size={20} className="text-purple-500" />} 
-                bg="bg-purple-100" 
-                label="Support" 
-                onClick={() => ionRouter.push('/profile/support')}
-              />
-              <Item 
-                icon={<Package size={20} className="text-green-500" />} 
-                bg="bg-green-100" 
-                label="Read Later" 
-                onClick={() => ionRouter.push('/read-later', 'forward', 'push')}
-              />
-              <Item 
-                icon={<Book size={20} className="text-yellow-500" />} 
-                bg="bg-yellow-100" 
-                label="Bookmarks" 
-                onClick={() => ionRouter.push('/bookmarks', 'forward', 'push')}
-              />
+            </div>
+
+            <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 space-y-1">
+              <Item icon={<User size={20} className="text-blue-500" />} bg="bg-blue-100" label="My Profile" value={profile?.username} onClick={() => ionRouter.push('/profile/details')} />
+              <Item icon={<HelpCircle size={20} className="text-purple-500" />} bg="bg-purple-100" label="Support" onClick={() => ionRouter.push('/profile/support')} />
+              <Item icon={<Package size={20} className="text-green-500" />} bg="bg-green-100" label="Read Later" onClick={() => ionRouter.push('/read-later')} />
+              <Item icon={<Book size={20} className="text-yellow-500" />} bg="bg-yellow-100" label="Bookmarks" onClick={() => ionRouter.push('/bookmarks')} />
               <div className="pt-2">
-                <Item 
-                  icon={<LogOut size={20} className="text-red-500" />} 
-                  bg="bg-red-100" 
-                  label="Logout" 
-                  onClick={handleLogout}
-                />
+                <Item icon={<LogOut size={20} className="text-red-500" />} bg="bg-red-100" label="Logout" onClick={handleLogout} />
               </div>
             </div>
           </motion.div>
@@ -292,33 +262,20 @@ const ProfilePage = () => {
   );
 };
 
-// Reusable item component
-const Item = ({ icon, bg, label, value, onClick }: { icon: React.ReactNode, bg: string, label: string, value?: string, onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void }) => {
+const Item = ({ icon, bg, label, value, onClick }: { icon: React.ReactNode; bg: string; label: string; value?: string; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void }) => {
   const { triggerHaptic } = useHaptics();
-  const { data: color } = useColor(bg, 'hex', { crossOrigin: 'anonymous' });
   return (
-    <button 
-      onClick={(e) => {
-        triggerHaptic();
-        if (onClick) {
-          onClick(e);
-        }
-      }}
-      className="w-full flex justify-between items-center p-3 rounded-xl hover:bg-gray-100 transition-colors duration-200"
-    >
-    <div className="flex items-center space-x-4">
-      <div className={`${bg} p-2 rounded-lg`}>
-        {icon}
+    <button onClick={(e) => { triggerHaptic(); onClick?.(e); }} className="w-full flex justify-between items-center p-3 rounded-xl hover:bg-gray-100/50 active:bg-gray-100 transition-colors duration-200">
+      <div className="flex items-center space-x-4">
+        <div className={`${bg} p-2 rounded-lg`}>{icon}</div>
+        <span className="font-medium text-black">{label}</span>
       </div>
-      <span className="font-medium text-black">{label}</span>
-    </div>
-    <div className="flex items-center space-x-2">
-      {value && <span style={{ color: getContrastColor(color || '#ffffff') }} className="text-gray-500">@{value}</span>}
-      <ChevronRight size={20} style={{ color: getContrastColor(color || '#ffffff') }} />
-    </div>
-  </button>
+      <div className="flex items-center space-x-2">
+        {value && <span className="text-gray-500">@{value}</span>}
+        <ChevronRight size={20} className="text-gray-400" />
+      </div>
+    </button>
   );
 };
-
 
 export default ProfilePage;

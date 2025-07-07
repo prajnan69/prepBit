@@ -8,6 +8,7 @@ import { Info } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Browser } from '@capacitor/browser';
 import { supabase } from '../lib/supabaseClient';
+import config from '../config';
 
 const InactiveSubscriptionPage = () => {
   const [session, setSession] = useState<Session | null>(null);
@@ -28,19 +29,40 @@ const InactiveSubscriptionPage = () => {
   }, []);
 
   const featureImages = [
-    // This is the image from your screenshot
     'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80',
     'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
   ];
 
+  const verifyTokenWithBackend = async (token: string) => {
+    try {
+      const res = await fetch(`${config.API_BASE_URL}/verify-token`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token })
+      });
+
+      const data = await res.json();
+      return data.valid ? data.user : null;
+    } catch (err) {
+      console.error('Token verification error:', err);
+      return null;
+    }
+  };
+
   const handleManageAccount = async () => {
-    console.log('handleManageAccount called');
-    console.log('Current session:', session);
     if (session) {
-      const url = `http://prepbit.academy/profile?token=${session.access_token}`;
-      console.log('Opening URL:', url);
-      await Browser.open({ url });
+      const token = session.access_token;
+      const verifiedUser = await verifyTokenWithBackend(token);
+
+      if (verifiedUser) {
+  const url = `${config.API_BASE_URL}/bridge/profile?token=${token}`;
+  console.log("Opening URL:", url);
+  await Browser.open({ url });
+} else {
+  console.warn('Invalid token. Access denied.');
+}
+
     } else {
       console.log('No session found');
     }
@@ -49,21 +71,17 @@ const InactiveSubscriptionPage = () => {
   return (
     <IonPage>
       <IonContent fullscreen className="font-poppins bg-gray-50">
-        {/* Main container with the top gradient */}
         <div className="relative w-full min-h-screen bg-gradient-to-b from-purple-100 via-gray-50 to-gray-50">
           <div className="flex flex-col items-center justify-center p-6 pt-16 h-full">
-
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="text-center mb-8"
             >
               <h1 className="text-3xl font-bold text-gray-900">Account Status</h1>
-              {/* --- FIX: Increased text contrast for readability --- */}
               <p className="text-gray-500 mt-2">No active plan found for this account.</p>
             </motion.div>
 
-            {/* Phone Mock-up with a cleaner, lighter glassmorphism */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
@@ -72,7 +90,7 @@ const InactiveSubscriptionPage = () => {
             >
               <div className="rounded-[2.2rem] overflow-hidden p-2">
                 <Swiper
-                  modules={[Pagination]} // Removed Autoplay/Fade for a cleaner feel like the screenshot
+                  modules={[Pagination]}
                   slidesPerView={1}
                   pagination={{ clickable: true }}
                   className="rounded-[1.8rem]"
@@ -94,22 +112,19 @@ const InactiveSubscriptionPage = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 0.5, delay: 0.4 }}
-              className="text-center mt-12 mb-24" // Space for sticky button
+              className="text-center mt-12 mb-24"
             >
-               {/* --- FIX: Matching the icon style from screenshot --- */}
-               <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-full mx-auto mb-4">
-                 <Info size={24} className="text-blue-600" />
-               </div>
-               <h2 className="text-xl font-semibold text-gray-900">Plan Management</h2>
-               {/* --- FIX: Increased text contrast for readability --- */}
-               <p className="text-gray-500 mt-2 max-w-sm">
-                  For your security, subscription and plan details are handled on our website.
-               </p>
+              <div className="w-12 h-12 flex items-center justify-center bg-blue-100 rounded-full mx-auto mb-4">
+                <Info size={24} className="text-blue-600" />
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900">Plan Management</h2>
+              <p className="text-gray-500 mt-2 max-w-sm">
+                For your security, subscription and plan details are handled on our website.
+              </p>
             </motion.div>
           </div>
         </div>
 
-        {/* Sticky Manage Account Button */}
         <motion.div
           initial={{ y: 100 }}
           animate={{ y: 0 }}

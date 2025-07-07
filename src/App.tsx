@@ -23,6 +23,7 @@ import DeleteAccountPage from './components/DeleteAccountPage';
 import SubscriptionRoute from './components/SubscriptionRoute';
 import { useAuth } from './hooks/useAuth';
 import NotificationToast from './components/NotificationToast';
+import BridgeProfilePage from './components/BridgeProfilePage';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -50,6 +51,13 @@ const App = () => {
 
   useEffect(() => {
     const addListener = async () => {
+      await CapacitorApp.addListener('appUrlOpen', (event: { url: string }) => {
+        const slug = event.url.split('.app').pop();
+        if (slug) {
+          ionRouter.push(slug);
+        }
+      });
+
       const listener = await CapacitorApp.addListener('backButton', () => {
         if (ionRouter.canGoBack()) {
           ionRouter.goBack();
@@ -146,20 +154,21 @@ const App = () => {
           <IonReactRouter>
             <IonRouterOutlet>
               <Switch>
-              <Route path="/privacy-policy" component={PrivacyPolicyPage} exact />
-              <Route path="/delete-account" component={DeleteAccountPage} exact />
-              <Route path="/login" component={LoginPage} exact />
-              <Route path="/additional-info" component={AdditionalInfoPage} exact />
-              <Route path="/time-selection" component={TimeSelectionPage} exact />
-              <Route path="/install" component={PlayStoreRedirectPage} exact />
-              <Route path="/subscribe" component={SubscriptionPage} exact />
-              <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
-              <PrivateRoute>
-                <SubscriptionRoute path="/" component={() => <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />} />
-              </PrivateRoute>
-            </Switch>
-          </IonRouterOutlet>
-        </IonReactRouter>
+                <Route path="/privacy-policy" component={PrivacyPolicyPage} exact />
+                <Route path="/delete-account" component={DeleteAccountPage} exact />
+                <Route path="/login" component={LoginPage} exact />
+                <Route path="/additional-info" component={AdditionalInfoPage} exact />
+                <Route path="/time-selection" component={TimeSelectionPage} exact />
+                <Route path="/install" component={PlayStoreRedirectPage} exact />
+                <Route path="/subscribe" component={SubscriptionPage} exact />
+                <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
+                <Route exact path="/bridge/profile" component={BridgeProfilePage} />
+                <PrivateRoute>
+                  <SubscriptionRoute path="/" component={() => <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />} />
+                </PrivateRoute>
+              </Switch>
+            </IonRouterOutlet>
+          </IonReactRouter>
         </SearchProvider>
       </ProfileProvider>
       <Toast message={toastMessage} show={showToast} onClose={() => setShowToast(false)} />

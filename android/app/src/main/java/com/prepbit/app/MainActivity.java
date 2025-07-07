@@ -18,6 +18,7 @@ public class MainActivity extends BridgeActivity {
     super.onResume();
     // Ensures the WebView fits the system windows (useful for immersive mode on certain devices)
     this.getBridge().getWebView().setFitsSystemWindows(true);
+    Log.d("MainActivity", "Current URL: " + this.getBridge().getWebView().getUrl());
   }
 
   // Method to trigger sharp haptic feedback using HapticFeedbackConstants
