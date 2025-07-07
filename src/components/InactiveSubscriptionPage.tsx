@@ -51,22 +51,29 @@ const InactiveSubscriptionPage = () => {
   };
 
   const handleManageAccount = async () => {
-    if (session) {
-      const token = session.access_token;
-      const verifiedUser = await verifyTokenWithBackend(token);
+  const sessionResp = await supabase.auth.getSession();
+  const session = sessionResp.data.session;
 
-      if (verifiedUser) {
-  const url = `${config.API_BASE_URL}/bridge/profile?token=${token}`;
-  console.log("Opening URL:", url);
-  await Browser.open({ url });
-} else {
-  console.warn('Invalid token. Access denied.');
-}
+  if (session) {
+    const { access_token, refresh_token } = session;
 
+    console.log("🧪 Access Token:", access_token?.slice(0, 10));
+    console.log("🧪 Refresh Token:", refresh_token?.slice(0, 10));
+
+    const verifiedUser = await verifyTokenWithBackend(access_token);
+    if (verifiedUser) {
+      const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
+      console.log("🔗 Opening browser with URL:", url);
+      await Browser.open({ url });
     } else {
-      console.log('No session found');
+      console.warn('Invalid token. Access denied.');
     }
-  };
+  } else {
+    console.log('❌ No session found');
+  }
+};
+
+
 
   return (
     <IonPage>
