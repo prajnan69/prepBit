@@ -34,44 +34,23 @@ const InactiveSubscriptionPage = () => {
     'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
   ];
 
-  const verifyTokenWithBackend = async (token: string) => {
-    try {
-      const res = await fetch(`${config.API_BASE_URL}/verify-token`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token })
-      });
-
-      const data = await res.json();
-      return data.valid ? data.user : null;
-    } catch (err) {
-      console.error('Token verification error:', err);
-      return null;
-    }
-  };
-
   const handleManageAccount = async () => {
-  const sessionResp = await supabase.auth.getSession();
-  const session = sessionResp.data.session;
+    const sessionResp = await supabase.auth.getSession();
+    const session = sessionResp.data.session;
 
-  if (session) {
-    const { access_token, refresh_token } = session;
+    if (session && session.access_token && session.refresh_token) {
+      const { access_token, refresh_token } = session;
 
-    console.log("🧪 Access Token:", access_token?.slice(0, 10));
-    console.log("🧪 Refresh Token:", refresh_token?.slice(0, 10));
+      console.log("🧪 Access Token:", access_token?.slice(0, 10));
+      console.log("🧪 Refresh Token:", refresh_token?.slice(0, 10));
 
-    const verifiedUser = await verifyTokenWithBackend(access_token);
-    if (verifiedUser) {
       const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
       console.log("🔗 Opening browser with URL:", url);
       await Browser.open({ url });
     } else {
-      console.warn('Invalid token. Access denied.');
+      console.log('❌ No session or tokens found');
     }
-  } else {
-    console.log('❌ No session found');
-  }
-};
+  };
 
 
 
