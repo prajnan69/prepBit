@@ -231,8 +231,9 @@ const LoginPage = () => {
         </div>
           </div>
         </div>
-        <div className="absolute bottom-4 w-full text-center">
+        <div className="absolute bottom-4 w-full text-center flex justify-center gap-4">
           <button onClick={() => ionRouter.push('/privacy-policy')} className="text-sm text-gray-500 underline">Privacy Policy</button>
+          <button onClick={() => ionRouter.push('/terms-and-conditions')} className="text-sm text-gray-500 underline">Terms and Conditions</button>
         </div>
       </IonContent>
     </IonPage>

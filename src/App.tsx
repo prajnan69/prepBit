@@ -15,6 +15,8 @@ import TimeSelectionPage from './components/TimeSelectionPage';
 import PlayStoreRedirectPage from './components/PlayStoreRedirectPage';
 import SubscriptionPage from './components/SubscriptionPage';
 import InactiveSubscriptionPage from './components/InactiveSubscriptionPage';
+import TermsAndConditionsPage from './components/TermsAndConditionsPage';
+import RefundPolicyPage from './components/RefundPolicyPage';
 import Toast from './components/Toast';
 import Tabs from './components/Tabs';
 import SupportDrawer from './components/SupportDrawer';
@@ -164,7 +166,9 @@ const App = () => {
                 <Route path="/install" component={PlayStoreRedirectPage} exact />
                 <Route path="/subscribe" component={SubscriptionPage} exact />
                 <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
-                <Route path="/bridge/profile" component={BridgeProfilePage} />
+                <Route path="/terms-and-conditions" component={TermsAndConditionsPage} exact />
+                <Route path="/refund-policy" component={RefundPolicyPage} exact />
+                <Route exact path="/bridge/profile" component={BridgeProfilePage} />
                 
                 {/* --- Private Routes --- */}
                 <PrivateRoute>

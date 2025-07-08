@@ -217,6 +217,9 @@ const SubscriptionPage = () => {
               ))}
             </div>
           )}
+          <div className="text-center mt-8">
+            <a href="/refund-policy" className="text-white/80 underline">Refund Policy</a>
+          </div>
         </div>
       </IonContent>
     </IonPage>

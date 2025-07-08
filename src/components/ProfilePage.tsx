@@ -175,6 +175,24 @@ const ProfilePage = () => {
     ionRouter.push('/login');
   };
 
+  const handleManageAccount = async () => {
+    const sessionResp = await supabase.auth.getSession();
+    const session = sessionResp.data.session;
+
+    if (session && session.access_token && session.refresh_token) {
+      const { access_token, refresh_token } = session;
+
+      console.log("🧪 Access Token:", access_token?.slice(0, 10));
+      console.log("🧪 Refresh Token:", refresh_token?.slice(0, 10));
+
+      const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
+      console.log("🔗 Opening browser with URL:", url);
+      await Browser.open({ url });
+    } else {
+      console.log('❌ No session or tokens found');
+    }
+  };
+
   return (
     <IonPage>
       <IonContent>
@@ -231,25 +249,21 @@ const ProfilePage = () => {
 
           <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
             <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 mb-4">
-              <Item
-                icon={<Star size={20} className="text-yellow-500" />}
-                bg="bg-yellow-100"
-                label="Manage Account"
-                onClick={async () => {
-                  const { data: { session } } = await supabase.auth.getSession();
-                  const token = session?.access_token;
-                  if (token) {
-                    const verified = await verifyTokenWithBackend(token);
-                    if (verified) {
-                      await Browser.open({ url: `${config.API_BASE_URL}/profile?token=${token}`, presentationStyle: 'popover' });
-                    } else {
-                      ionRouter.push('/login');
-                    }
-                  } else {
-                    ionRouter.push('/login');
-                  }
-                }}
-              />
+              {Capacitor.isNativePlatform() ? (
+                <Item
+                  icon={<Star size={20} className="text-yellow-500" />}
+                  bg="bg-yellow-100"
+                  label="Manage Account"
+                  onClick={handleManageAccount}
+                />
+              ) : (
+                <Item
+                  icon={<Star size={20} className="text-yellow-500" />}
+                  bg="bg-yellow-100"
+                  label="Manage Subscription"
+                  onClick={() => ionRouter.push('/subscribe', 'root')}
+                />
+              )}
             </div>
 
             <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 space-y-1">
