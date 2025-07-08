@@ -54,6 +54,7 @@ const ProfilePage = () => {
   const { triggerHaptic } = useHaptics();
   const [showHoldIndicator, setShowHoldIndicator] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
   const urlParams = new URLSearchParams(window.location.search);
@@ -90,7 +91,12 @@ const ProfilePage = () => {
         if (!error) {
           console.log('✅ Session restored from localStorage');
           refetchProfile();
+          setIsLoading(false);
+        } else {
+          setIsLoading(false);
         }
+      } else {
+        setIsLoading(false);
       }
     }
   };
@@ -196,87 +202,93 @@ const ProfilePage = () => {
   return (
     <IonPage>
       <IonContent>
-        <motion.div className="min-h-screen flex flex-col overflow-hidden" animate={{ background }} transition={{ duration: 1 }}>
-          <div className="flex-shrink-0 pt-28 pb-8 flex flex-col items-center">
-            <motion.div className="relative w-32 h-32 rounded-full bg-white border-4 shadow-lg overflow-hidden" animate={{ borderColor: color || '#a7f3d0' }} transition={{ duration: 1 }}>
-              <AnimatePresence>
-                {isUploading ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
-                  </div>
-                ) : profile?.avatar_url ? (
-                  <motion.img key={profile.avatar_url} src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-                ) : (
-                  <div className="flex items-center justify-center w-full h-full bg-gray-200">
-                    <span className="text-4xl font-bold text-gray-600">{(profile?.full_name || 'A').split(' ').map(n => n[0]).join('')}</span>
-                  </div>
-                )}
-              </AnimatePresence>
-              <input type="file" ref={fileInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
-            </motion.div>
-
-            <motion.div
-              onTapStart={() => {
-                (window as any).holdTimer = setTimeout(() => handleEditAvatar(), 500);
-                (window as any).vibrationInterval = setInterval(() => triggerHaptic(), 100);
-              }}
-              onTapCancel={() => {
-                clearTimeout((window as any).holdTimer);
-                clearInterval((window as any).vibrationInterval);
-              }}
-              onTap={() => {
-                clearTimeout((window as any).holdTimer);
-                clearInterval((window as any).vibrationInterval);
-              }}
-              whileTap={{ scale: 0.95 }}
-              className="w-32 h-32 rounded-full absolute"
-            >
-              <AnimatePresence>
-                {showHoldIndicator && (
-                  <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`absolute inset-0 rounded-full flex items-center justify-center z-10 ${profile?.avatar_url ? 'bg-black/20' : ''}`}>
-                    <p className={`text-xs ${profile?.avatar_url ? 'text-white' : 'text-black'}`}>Hold to change</p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </motion.div>
-
-            <div className="text-center mt-4">
-              <h1 style={{ color: getContrastColor(color || '#ffffff') }} className="text-2xl font-bold">
-                {profile?.full_name || 'Aspirant'}
-              </h1>
-            </div>
+        {isLoading ? (
+          <div className="flex items-center justify-center h-full">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>
+        ) : (
+          <motion.div className="min-h-screen flex flex-col overflow-hidden" animate={{ background }} transition={{ duration: 1 }}>
+            <div className="flex-shrink-0 pt-28 pb-8 flex flex-col items-center">
+              <motion.div className="relative w-32 h-32 rounded-full bg-white border-4 shadow-lg overflow-hidden" animate={{ borderColor: color || '#a7f3d0' }} transition={{ duration: 1 }}>
+                <AnimatePresence>
+                  {isUploading ? (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
+                    </div>
+                  ) : profile?.avatar_url ? (
+                    <motion.img key={profile.avatar_url} src={profile.avatar_url} alt="Profile" className="w-full h-full object-cover" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+                  ) : (
+                    <div className="flex items-center justify-center w-full h-full bg-gray-200">
+                      <span className="text-4xl font-bold text-gray-600">{(profile?.full_name || 'A').split(' ').map(n => n[0]).join('')}</span>
+                    </div>
+                  )}
+                </AnimatePresence>
+                <input type="file" ref={fileInputRef} onChange={handleAvatarChange} className="hidden" accept="image/*" />
+              </motion.div>
 
-          <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
-            <div className="bg-white/30 backdrop-hue-rotate-180 backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4">
-              {Capacitor.isNativePlatform() ? (
-                <Item
-                  icon={<Star size={20} className="text-yellow-500" />}
-                  bg="bg-yellow-100"
-                  label="Manage Account"
-                  onClick={handleManageAccount}
-                />
-              ) : (
-                <Item
-                  icon={<Star size={20} className="text-yellow-500" />}
-                  bg="bg-yellow-100"
-                  label="Manage Subscription"
-                  onClick={() => ionRouter.push('/subscribe', 'root')}
-                />
-              )}
-            </div>
+              <motion.div
+                onTapStart={() => {
+                  (window as any).holdTimer = setTimeout(() => handleEditAvatar(), 500);
+                  (window as any).vibrationInterval = setInterval(() => triggerHaptic(), 100);
+                }}
+                onTapCancel={() => {
+                  clearTimeout((window as any).holdTimer);
+                  clearInterval((window as any).vibrationInterval);
+                }}
+                onTap={() => {
+                  clearTimeout((window as any).holdTimer);
+                  clearInterval((window as any).vibrationInterval);
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="w-32 h-32 rounded-full absolute"
+              >
+                <AnimatePresence>
+                  {showHoldIndicator && (
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className={`absolute inset-0 rounded-full flex items-center justify-center z-10 ${profile?.avatar_url ? 'bg-black/20' : ''}`}>
+                      <p className={`text-xs ${profile?.avatar_url ? 'text-white' : 'text-black'}`}>Hold to change</p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
 
-            <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 space-y-1">
-              <Item icon={<User size={20} className="text-blue-500" />} bg="bg-blue-100" label="My Profile" value={profile?.username} onClick={() => ionRouter.push('/profile/details')} />
-              <Item icon={<HelpCircle size={20} className="text-purple-500" />} bg="bg-purple-100" label="Support" onClick={() => ionRouter.push('/profile/support')} />
-              <Item icon={<Package size={20} className="text-green-500" />} bg="bg-green-100" label="Read Later" onClick={() => ionRouter.push('/read-later')} />
-              <Item icon={<Book size={20} className="text-yellow-500" />} bg="bg-yellow-100" label="Bookmarks" onClick={() => ionRouter.push('/bookmarks')} />
-              <div className="pt-2">
-                <Item icon={<LogOut size={20} className="text-red-500" />} bg="bg-red-100" label="Logout" onClick={handleLogout} />
+              <div className="text-center mt-4">
+                <h1 style={{ color: getContrastColor(color || '#ffffff') }} className="text-2xl font-bold">
+                  {profile?.full_name || 'Aspirant'}
+                </h1>
               </div>
             </div>
+
+            <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
+              <div className="bg-white/30 backdrop-hue-rotate-180 backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4">
+                {Capacitor.isNativePlatform() ? (
+                  <Item
+                    icon={<Star size={20} className="text-yellow-500" />}
+                    bg="bg-yellow-100"
+                    label="Manage Account"
+                    onClick={handleManageAccount}
+                  />
+                ) : (
+                  <Item
+                    icon={<Star size={20} className="text-yellow-500" />}
+                    bg="bg-yellow-100"
+                    label="Manage Subscription"
+                    onClick={() => ionRouter.push('/subscribe', 'root')}
+                  />
+                )}
+              </div>
+
+              <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 space-y-1">
+                <Item icon={<User size={20} className="text-blue-500" />} bg="bg-blue-100" label="My Profile" value={profile?.username} onClick={() => ionRouter.push('/profile/details')} />
+                <Item icon={<HelpCircle size={20} className="text-purple-500" />} bg="bg-purple-100" label="Support" onClick={() => ionRouter.push('/profile/support')} />
+                <Item icon={<Package size={20} className="text-green-500" />} bg="bg-green-100" label="Read Later" onClick={() => ionRouter.push('/read-later')} />
+                <Item icon={<Book size={20} className="text-yellow-500" />} bg="bg-yellow-100" label="Bookmarks" onClick={() => ionRouter.push('/bookmarks')} />
+                <div className="pt-2">
+                  <Item icon={<LogOut size={20} className="text-red-500" />} bg="bg-red-100" label="Logout" onClick={handleLogout} />
+                </div>
+              </div>
+            </motion.div>
           </motion.div>
-        </motion.div>
+        )}
       </IonContent>
     </IonPage>
   );

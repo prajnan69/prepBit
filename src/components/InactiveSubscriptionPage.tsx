@@ -29,9 +29,11 @@ const InactiveSubscriptionPage = () => {
   }, []);
 
   const featureImages = [
-    'https://images.unsplash.com/photo-1506748686214-e9df14d4d9d0?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=800&q=80',
-    'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=800&q=80',
+    'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/onboarding//0.jpg',
+    'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/onboarding//5.webp',
+    'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/onboarding//3.webp',
+    'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/onboarding//4.webp',
+    
   ];
 
   const handleManageAccount = async () => {
@@ -80,13 +82,14 @@ const InactiveSubscriptionPage = () => {
                   slidesPerView={1}
                   pagination={{ clickable: true }}
                   className="rounded-[1.8rem]"
+                  style={{ backgroundColor: '#FCCB46' }}
                 >
                   {featureImages.map((src, i) => (
                     <SwiperSlide key={i}>
                       <img
                         src={src}
                         alt={`Feature screenshot ${i + 1}`}
-                        className="w-full h-96 object-cover"
+                        className="w-full h-96 object-contain p-4"
                       />
                     </SwiperSlide>
                   ))}

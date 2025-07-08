@@ -118,17 +118,22 @@ const SubscriptionPage = () => {
       ]
   ).map((plan: any) => {
     if (discountApplied && !plan.isTrial) {
-      return { ...plan, price: plan.price * 0.8 };
-    }
+  return {
+    ...plan,
+    price: plan.price * 0.8,
+    perDayPrice: plan.perDayPrice ? plan.perDayPrice * 0.8 : undefined,
+  };
+}
     return plan;
   });
 
   return (
     <IonPage>
-      <IonContent fullscreen className="h-full">
-        <div className="min-h-full w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-900 to-gray-800">
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
+      <IonContent fullscreen>
+        <div className="min-h-screen w-full flex flex-col items-center justify-center p-4 sm:p-6 md:p-8 bg-gradient-to-br from-gray-900 to-gray-800">
+          <div className="flex-grow w-full flex flex-col items-center justify-center">
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="text-center mb-8 md:mb-12"
@@ -148,7 +153,7 @@ const SubscriptionPage = () => {
                 placeholder="Enter referral code"
                 value={referralCode}
                 onChange={handleReferralCodeChange}
-                className="w-full px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                className="w-full text-center px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
               <AnimatePresence>
                 {referralCode.toLowerCase() === 'promo20' && (
@@ -217,7 +222,8 @@ const SubscriptionPage = () => {
               ))}
             </div>
           )}
-          <div className="text-center mt-8">
+          </div>
+          <div className="text-center py-4">
             <a href="/refund-policy" className="text-white/80 underline">Refund Policy</a>
           </div>
         </div>
@@ -280,23 +286,33 @@ const PlanCard = ({
           </div>
 
           <div className="my-6 md:my-8 text-left w-full">
-            <div className="flex items-center gap-3 mt-2">
-              {discountApplied && (
-                <motion.span
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-white/40 line-through text-xl"
-                >
-                  ₹{originalPrice}
-                </motion.span>
-              )}
-              <div className="flex">
-                <span className="text-3xl font-bold text-white">₹</span>
-                {priceString.map((digit, i) => (
-                  <DigitRoll key={i} digit={digit} />
-                ))}
-              </div>
-            </div>
+            <div className="flex flex-col items-start gap-1 mt-2">
+  {perDayPrice && (
+    <div className="flex items-baseline gap-1">
+      <span className="text-4xl font-bold text-white">₹{perDayPrice.toFixed(1)}</span>
+      <span className="text-base text-white/70">/day</span>
+    </div>
+  )}
+
+  <div className="flex items-center gap-2">
+    {discountApplied && (
+      <motion.span
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="text-white/40 line-through text-base"
+      >
+        ₹{originalPrice}
+      </motion.span>
+    )}
+    <div className="flex items-baseline">
+      <span className="text-sm text-white/70">Billed at </span>
+      <span className="text-lg font-semibold text-white ml-1">
+        ₹{Math.round(price)}
+      </span>
+    </div>
+  </div>
+</div>
+
 
             {discountApplied && (
               <motion.div
