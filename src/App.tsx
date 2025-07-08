@@ -164,7 +164,7 @@ const App = () => {
                 <Route path="/install" component={PlayStoreRedirectPage} exact />
                 <Route path="/subscribe" component={SubscriptionPage} exact />
                 <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
-                <Route exact path="/bridge/profile" component={BridgeProfilePage} />
+                <Route path="/bridge/profile" component={BridgeProfilePage} />
                 
                 {/* --- Private Routes --- */}
                 <PrivateRoute>
