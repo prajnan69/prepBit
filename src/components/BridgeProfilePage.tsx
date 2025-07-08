@@ -1,16 +1,14 @@
 import { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
 import { useIonRouter, IonPage, IonContent, IonSpinner, IonText } from '@ionic/react';
 import { supabase } from '../lib/supabaseClient'; // Ensure this path is correct
 
 const BridgeProfilePage = () => {
-  const location = useLocation(); // Use the hook from react-router-dom to get location info
   const ionRouter = useIonRouter();
 
   useEffect(() => {
     // 1. READ FROM THE HASH, NOT THE SEARCH
     // The hash will be "#access_token=...&refresh_token=..."
-    const hash = location.hash.substring(1); // Remove the leading '#'
+    const hash = window.location.hash.substring(1); // Remove the leading '#'
 
     if (!hash) {
       console.warn("Bridge page loaded without a URL hash. This is expected if navigating directly. Redirecting to login.");
@@ -45,8 +43,8 @@ const BridgeProfilePage = () => {
       console.warn("⚠️ Required tokens not found in URL hash. Redirecting to login.");
       ionRouter.push('/login', 'root', 'replace');
     }
-  // This effect should only run once when the component mounts and the location changes.
-  }, [ionRouter, location]);
+  // This effect should only run once when the component mounts.
+  }, [ionRouter]);
 
   // Provide a user-friendly loading indicator while the async logic runs
   return (
