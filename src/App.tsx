@@ -17,6 +17,7 @@ import SubscriptionPage from './components/SubscriptionPage';
 import InactiveSubscriptionPage from './components/InactiveSubscriptionPage';
 import TermsAndConditionsPage from './components/TermsAndConditionsPage';
 import RefundPolicyPage from './components/RefundPolicyPage';
+import AboutUsPage from './components/AboutUsPage';
 import Toast from './components/Toast';
 import Tabs from './components/Tabs';
 import SupportDrawer from './components/SupportDrawer';
@@ -168,6 +169,7 @@ const App = () => {
                 <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
                 <Route path="/terms-and-conditions" component={TermsAndConditionsPage} exact />
                 <Route path="/refund-policy" component={RefundPolicyPage} exact />
+                <Route path="/about-us" component={AboutUsPage} exact />
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
                 
                 {/* --- Private Routes --- */}
