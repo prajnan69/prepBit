@@ -112,6 +112,12 @@ const ProfilePage = () => {
     }
   }, [color]);
 
+  useEffect(() => {
+  supabase.auth.getSession().then(({ data: { session } }) => {
+    console.log("📦 Current session:", session);
+  });
+}, []);
+
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files?.length) return;
     uploadAvatar(event.target.files[0]);

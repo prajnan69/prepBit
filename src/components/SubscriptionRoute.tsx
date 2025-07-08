@@ -1,37 +1,33 @@
-import { Redirect, Route, useLocation } from 'react-router-dom';
+import { Redirect, Route } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../context/ProfileContext';
+import { IonPage, IonContent } from '@ionic/react';
 
-const SubscriptionRoute = ({ component: Component, ...rest }: any) => {
-  const { session, loading } = useAuth();
+const SubscriptionRoute = ({ component: Component, requireActiveSubscription = true, ...rest }: any) => {
+  const { session, loading: authLoading } = useAuth();
   const { profile, loading: profileLoading } = useProfile();
-  const location = useLocation();
 
-  if (loading || profileLoading) {
+  if (authLoading || profileLoading) {
     return (
-      <div className="h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
+      <IonPage>
+        <IonContent fullscreen>
+          <div className="flex items-center justify-center h-screen">
+            <div className="w-8 h-8 border-b-2 border-gray-900 rounded-full animate-spin"></div>
+          </div>
+        </IonContent>
+      </IonPage>
     );
   }
 
-  // If the user is on the inactive subscription page or profile page, don't check for subscription
-  if (location.pathname === '/inactive-subscription' || location.pathname === '/profile' || location.pathname === '/subscription') {
-    return <Component {...rest} />;
+  if (!session) {
+    return <Redirect to="/login" />;
   }
 
-  return (
-    <Route
-      {...rest}
-      render={(props) =>
-        session && profile?.subscription_status === 'active' ? (
-          <Component {...props} />
-        ) : (
-          <Redirect to="/inactive-subscription" />
-        )
-      }
-    />
-  );
+  if (requireActiveSubscription && profile?.subscription_status !== 'active') {
+    return <Redirect to="/inactive-subscription" />;
+  }
+
+  return <Route {...rest} render={(props) => <Component {...props} />} />;
 };
 
 export default SubscriptionRoute;

@@ -24,6 +24,8 @@ import SubscriptionRoute from './components/SubscriptionRoute';
 import { useAuth } from './hooks/useAuth';
 import NotificationToast from './components/NotificationToast';
 import BridgeProfilePage from './components/BridgeProfilePage';
+import PrivateRoute from './components/PrivateRoute';
+import ProfilePage from './components/ProfilePage'; 
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -35,7 +37,6 @@ import '@ionic/react/css/text-alignment.css';
 import '@ionic/react/css/text-transformation.css';
 import '@ionic/react/css/flex-utils.css';
 import '@ionic/react/css/display.css';
-import PrivateRoute from './components/PrivateRoute';
 
 setupIonicReact();
 
@@ -154,6 +155,7 @@ const App = () => {
           <IonReactRouter>
             <IonRouterOutlet>
               <Switch>
+                {/* --- Public Routes --- */}
                 <Route path="/privacy-policy" component={PrivacyPolicyPage} exact />
                 <Route path="/delete-account" component={DeleteAccountPage} exact />
                 <Route path="/login" component={LoginPage} exact />
@@ -163,8 +165,27 @@ const App = () => {
                 <Route path="/subscribe" component={SubscriptionPage} exact />
                 <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
+                
+                {/* --- Private Routes --- */}
                 <PrivateRoute>
-                  <SubscriptionRoute path="/" component={() => <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />} />
+                  <Switch> {/* This Switch is crucial for ordering the private routes */}
+                    
+                    {/* Rule 1: The Profile page is accessible to any logged-in user. */}
+                    <Route
+                      path="/profile"
+                      render={() => <ProfilePage />}
+                      exact
+                    />
+                    
+                    {/* Rule 2: The main app (Tabs) requires an active subscription. */}
+                    {/* This will catch all other private paths and check for a subscription. */}
+                    <SubscriptionRoute 
+                      path="/" 
+                      component={() => <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />} 
+                      requireActiveSubscription={true}
+                    />
+
+                  </Switch>
                 </PrivateRoute>
               </Switch>
             </IonRouterOutlet>

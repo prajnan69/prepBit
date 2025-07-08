@@ -1,5 +1,5 @@
 const config = {
-  API_BASE_URL: 'https://civil-service-backend.fly.dev/api',
+  API_BASE_URL: 'https://civil-service-backedn.fly.dev/api',
 };
 
 export default config;
