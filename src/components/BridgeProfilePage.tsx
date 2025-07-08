@@ -6,9 +6,11 @@ const BridgeProfilePage = () => {
   const ionRouter = useIonRouter();
 
   useEffect(() => {
+    console.log("Bridge page loaded. Starting auth process...");
     // 1. READ FROM THE HASH, NOT THE SEARCH
     // The hash will be "#access_token=...&refresh_token=..."
     const hash = window.location.hash.substring(1); // Remove the leading '#'
+    console.log("URL Hash:", hash);
 
     if (!hash) {
       console.warn("Bridge page loaded without a URL hash. This is expected if navigating directly. Redirecting to login.");
@@ -20,6 +22,8 @@ const BridgeProfilePage = () => {
     const params = new URLSearchParams(hash);
     const access_token = params.get('access_token');
     const refresh_token = params.get('refresh_token');
+    console.log("Access Token from URL:", access_token ? 'Found' : 'Not Found');
+    console.log("Refresh Token from URL:", refresh_token ? 'Found' : 'Not Found');
 
     // 3. VALIDATE BOTH TOKENS ARE PRESENT
     if (access_token && refresh_token) {
