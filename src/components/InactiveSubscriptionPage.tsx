@@ -43,14 +43,10 @@ const InactiveSubscriptionPage = () => {
     if (session && session.access_token && session.refresh_token) {
       const { access_token, refresh_token } = session;
 
-      console.log("🧪 Access Token:", access_token?.slice(0, 10));
-      console.log("🧪 Refresh Token:", refresh_token?.slice(0, 10));
-
+  
       const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
-      console.log("🔗 Opening browser with URL:", url);
       await Browser.open({ url });
     } else {
-      console.log('❌ No session or tokens found');
     }
   };
 

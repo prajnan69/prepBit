@@ -55,12 +55,16 @@ const ProfilePage = () => {
   const [showHoldIndicator, setShowHoldIndicator] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const sessionRestored = useRef(false);
 
   useEffect(() => {
-  const urlParams = new URLSearchParams(window.location.search);
-  const token = urlParams.get('token');
-
   const restoreSession = async () => {
+    if (sessionRestored.current) return;
+    sessionRestored.current = true;
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+    setIsLoading(true);
     if (token) {
       try {
         const { error } = await supabase.auth.setSession({
@@ -69,17 +73,13 @@ const ProfilePage = () => {
         });
 
         if (!error) {
-          console.log('✅ Session restored from token');
           localStorage.setItem('prepbit_token', token);
-          refetchProfile();
-          const { data: sessionData } = await supabase.auth.getSession();
-          console.log('✅ Active session:', sessionData);
+          await refetchProfile();
           window.history.replaceState(null, '', '/profile');
-        } else {
-          console.error('❌ Failed to set session:', error);
         }
       } catch (err) {
-        console.error('Exception while setting session:', err);
+      } finally {
+        setIsLoading(false);
       }
     } else {
       const savedToken = localStorage.getItem('prepbit_token');
@@ -89,15 +89,10 @@ const ProfilePage = () => {
           refresh_token: ''
         });
         if (!error) {
-          console.log('✅ Session restored from localStorage');
-          refetchProfile();
-          setIsLoading(false);
-        } else {
-          setIsLoading(false);
+          await refetchProfile();
         }
-      } else {
-        setIsLoading(false);
       }
+      setIsLoading(false);
     }
   };
 
@@ -120,7 +115,6 @@ const ProfilePage = () => {
 
   useEffect(() => {
   supabase.auth.getSession().then(({ data: { session } }) => {
-    console.log("📦 Current session:", session);
   });
 }, []);
 
@@ -188,21 +182,17 @@ const ProfilePage = () => {
     if (session && session.access_token && session.refresh_token) {
       const { access_token, refresh_token } = session;
 
-      console.log("🧪 Access Token:", access_token?.slice(0, 10));
-      console.log("🧪 Refresh Token:", refresh_token?.slice(0, 10));
 
       const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
-      console.log("🔗 Opening browser with URL:", url);
       await Browser.open({ url });
     } else {
-      console.log('❌ No session or tokens found');
     }
   };
 
   return (
     <IonPage>
       <IonContent>
-        {isLoading ? (
+        {isLoading || !profile ? (
           <div className="flex items-center justify-center h-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
           </div>

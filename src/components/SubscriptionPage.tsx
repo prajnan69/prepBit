@@ -11,6 +11,7 @@ import { cn } from '../lib/utils';
 import Card from './Card';
 import { useIsMobile } from '../hooks/useIsMobile';
 import DigitRoll from './DigitRoll';
+import './PushButton.css';
 
 const SubscriptionPage = () => {
   const [userStatus, setUserStatus] = useState<'new' | 'returning'>('new');
@@ -18,42 +19,141 @@ const SubscriptionPage = () => {
   const { session } = useAuth();
   const user = session?.user;
   const isMobile = useIsMobile();
-  const [referralCode, setReferralCode] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [validPromoCodes, setValidPromoCodes] = useState<any[]>([]);
+  const [promoStatus, setPromoStatus] = useState<'default' | 'valid' | 'invalid' | 'used' | 'expired'>('default');
+  const [usedTimestamp, setUsedTimestamp] = useState<string | null>(null);
   const [discountApplied, setDiscountApplied] = useState(false);
   const [timeLeft, setTimeLeft] = useState(300); // 5 minutes in seconds
+  const [offerTimeLeft, setOfferTimeLeft] = useState(0);
 
   useEffect(() => {
-    const checkUserStatus = async () => {
-      if (user) {
-        const { data } = await supabase
-          .from('subscriptions')
-          .select('*')
-          .eq('user_id', user.id);
-        if (data && data.length > 0) {
-          setUserStatus('returning');
+    const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      const { data: timerData } = await supabase.from('app_settings').select('value, created_at').eq('key', 'OFFER_TIMER').single();
+      if (timerData) {
+        const hours = parseInt(timerData.value, 10);
+        const createdAt = new Date(timerData.created_at).getTime();
+        const now = new Date().getTime();
+        const diff = now - createdAt;
+        const hoursInMs = hours * 60 * 60 * 1000;
+        const remaining = hoursInMs - diff;
+        if (remaining > 0) {
+          setOfferTimeLeft(remaining);
         }
+      }
+
+      const { data: promoData } = await supabase.from('promo_codes').select('*').eq('is_active', true);
+      if (promoData) {
+        setValidPromoCodes(promoData);
+      }
+
+      const { data: subData } = await supabase
+        .from('subscriptions')
+        .select('*')
+        .eq('user_id', user.id);
+      if (subData && subData.length > 0) {
+        setUserStatus('returning');
       }
       setLoading(false);
     };
-    checkUserStatus();
+    fetchData();
   }, [user]);
+
+  useEffect(() => {
+    if (promoCode.length === 6) {
+      const code = validPromoCodes.find(c => c.code === promoCode.toUpperCase());
+      if (code) {
+        setPromoStatus('valid');
+      } else {
+        setPromoStatus('invalid');
+      }
+    } else {
+      setPromoStatus('default');
+    }
+  }, [promoCode, validPromoCodes]);
 
   useEffect(() => {
     if (discountApplied) {
       const timer = setInterval(() => {
-        setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1 : 0));
+        setTimeLeft((prevTime) => {
+          if (prevTime <= 1) {
+            clearInterval(timer);
+            setDiscountApplied(false);
+            setPromoStatus('expired');
+            setPromoCode('');
+            return 0;
+          }
+          return prevTime - 1;
+        });
       }, 1000);
       return () => clearInterval(timer);
     }
   }, [discountApplied]);
 
-  const handleReferralCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setReferralCode(e.target.value);
+  useEffect(() => {
+    if (offerTimeLeft > 0) {
+      const timer = setInterval(() => {
+        setOfferTimeLeft((prevTime) => (prevTime > 1000 ? prevTime - 1000 : 0));
+      }, 1000);
+      return () => clearInterval(timer);
+    }
+  }, [offerTimeLeft]);
+
+  const handlePromoCodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (value.length <= 6) {
+      setPromoCode(value);
+    }
   };
 
-  const handleApplyDiscount = () => {
-    if (referralCode.toLowerCase() === 'promo20') {
-      setDiscountApplied(true);
+  const handleApplyDiscount = async () => {
+    if (!user) return;
+
+    const code = validPromoCodes.find(c => c.code === promoCode);
+    if (!code) {
+      setPromoStatus('invalid');
+      return;
+    }
+
+    const { data: existingUse, error } = await supabase
+      .from('user_promo_codes')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('promo_code_id', code.id)
+      .single();
+
+    if (existingUse) {
+      if (existingUse.is_success) {
+        setPromoStatus('used');
+        setUsedTimestamp(new Date(existingUse.used_at).toLocaleString());
+      } else {
+        // If the user tried but payment failed, allow them to try again
+        // and start the timer from when they last tried.
+        const usedAt = new Date(existingUse.used_at).getTime();
+        const now = new Date().getTime();
+        const diff = Math.floor((now - usedAt) / 1000);
+        if (diff < 300) {
+          setTimeLeft(300 - diff);
+          setDiscountApplied(true);
+        } else {
+          setPromoStatus('used');
+          setUsedTimestamp(new Date(existingUse.used_at).toLocaleString());
+        }
+      }
+    } else {
+      const { error: insertError } = await supabase
+        .from('user_promo_codes')
+        .insert({ user_id: user.id, promo_code_id: code.id });
+
+      if (!insertError) {
+        setDiscountApplied(true);
+        setTimeLeft(300);
+      }
     }
   };
 
@@ -75,12 +175,21 @@ const SubscriptionPage = () => {
     return `${minutes}:${remainingSeconds < 10 ? '0' : ''}${remainingSeconds}`;
   };
 
+  const formatOfferTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
+    return `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   const plans = (userStatus === 'new'
     ? [
         {
           title: '2-Day Trial',
           price: 89,
           features: ['2-day access', 'Full feature set'],
+          perDayPrice: 44.5,
           isTrial: true,
         },
         {
@@ -150,13 +259,14 @@ const SubscriptionPage = () => {
             <div className="relative">
               <input
                 type="text"
-                placeholder="Enter referral code"
-                value={referralCode}
-                onChange={handleReferralCodeChange}
+                placeholder="Enter promo code"
+                value={promoCode}
+                onChange={handlePromoCodeChange}
+                maxLength={6}
                 className="w-full text-center px-4 py-3 rounded-xl bg-white/20 text-white placeholder-white/70 focus:outline-none focus:ring-2 focus:ring-yellow-400"
               />
               <AnimatePresence>
-                {referralCode.toLowerCase() === 'promo20' && (
+                {promoStatus === 'valid' && (
                   <motion.button
                     initial={{ opacity: 0, x: 10 }}
                     animate={{ opacity: 1, x: 0 }}
@@ -170,6 +280,36 @@ const SubscriptionPage = () => {
               </AnimatePresence>
             </div>
             <AnimatePresence>
+              {promoStatus === 'expired' && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-xs text-red-400 mt-2 text-center"
+                >
+                  Promo code expired.
+                </motion.p>
+              )}
+              {promoStatus === 'invalid' && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-xs text-red-400 mt-2 text-center"
+                >
+                  Invalid promo code.
+                </motion.p>
+              )}
+              {promoStatus === 'used' && (
+                <motion.p
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-xs text-yellow-300 mt-2 text-center"
+                >
+                  You have already used this promo code on {usedTimestamp}.
+                </motion.p>
+              )}
               {discountApplied && (
                 <motion.p
                   initial={{ opacity: 0, y: -10 }}
@@ -177,7 +317,7 @@ const SubscriptionPage = () => {
                   exit={{ opacity: 0, y: -10 }}
                   className="text-xs text-yellow-300 mt-2 text-center max-w-xs mx-auto"
                 >
-                  You can only use this referral code once with this phone number. The offer will expire when the timer runs out.
+                  You can only use this promo code once. The offer will expire when the timer runs out.
                 </motion.p>
               )}
             </AnimatePresence>
@@ -202,6 +342,8 @@ const SubscriptionPage = () => {
                       isDiscountActive={discountApplied}
                       timeLeft={timeLeft}
                       formatTime={formatTime}
+                      offerTimeLeft={offerTimeLeft}
+                      formatOfferTime={formatOfferTime}
                     />
                   </SwiperSlide>
                 ))}
@@ -218,6 +360,8 @@ const SubscriptionPage = () => {
                   isDiscountActive={discountApplied}
                   timeLeft={timeLeft}
                   formatTime={formatTime}
+                  offerTimeLeft={offerTimeLeft}
+                  formatOfferTime={formatOfferTime}
                 />
               ))}
             </div>
@@ -244,6 +388,8 @@ const PlanCard = ({
   isDiscountActive,
   timeLeft,
   formatTime,
+  offerTimeLeft,
+  formatOfferTime,
 }: {
   title: string;
   price: number;
@@ -256,6 +402,8 @@ const PlanCard = ({
   isDiscountActive?: boolean;
   timeLeft: number;
   formatTime: (seconds: number) => string;
+  offerTimeLeft: number;
+  formatOfferTime: (ms: number) => string;
 }) => {
   const { triggerHaptic } = useHaptics();
   const originalPrice = isTrial ? 89 : title.toLowerCase().includes('monthly') ? 349 : 3349;
@@ -331,17 +479,22 @@ const PlanCard = ({
                 <motion.p
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1, transition: { delay: 1 } }}
-                  className="text-lg text-white/70 mt-1"
+                  className="text-xl text-white/70 mt-1"
                 >
                   Just for you
                 </motion.p>
               </motion.div>
             )}
 
-            {!discountApplied && perDayPrice && (
-              <div className="text-xs text-yellow-300 mt-3">
-                ⏳ Offer ends in <span className="font-bold">2h 12m</span>
-              </div>
+            {!discountApplied && perDayPrice && (title.toLowerCase().includes('monthly') || title.toLowerCase().includes('yearly')) && offerTimeLeft > 0 && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="text-xs text-yellow-300 mt-3"
+              >
+                ⏳ Offer ends in <span className="font-bold">{formatOfferTime(offerTimeLeft)}</span>
+              </motion.div>
             )}
           </div>
 
@@ -359,7 +512,7 @@ const PlanCard = ({
               <div className="flex flex-col items-center">
                 <div className="text-center text-sm text-white/90 mb-4 px-2">
                   <p className="font-bold text-yellow-300">
-                    Smart move!
+                    Not valid!
                   </p>
                   <p className="mt-1">
                     That amazing discount is for our full plans. Choose a
@@ -373,9 +526,11 @@ const PlanCard = ({
                 </button>
               </div>
             ) : (
-              <div className="inline-block bg-white/20 hover:bg-white/30 text-white font-bold py-3 px-12 rounded-2xl transition-colors">
-                Choose Plan
-              </div>
+              <button className="pushable">
+                <span className="front">
+                  Choose Plan
+                </span>
+              </button>
             )}
           </div>
         </div>
