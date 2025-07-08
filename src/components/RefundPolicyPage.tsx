@@ -28,7 +28,7 @@ const RefundPolicyPage = () => {
         <h2>Contact Us</h2>
         <p>If you have any questions about our Refund Policy, please contact us:</p>
         <ul>
-          <li>By email: [Your Email]</li>
+          <li>By email: support@prepbit.academy</li>
         </ul>
       </IonContent>
     </IonPage>
