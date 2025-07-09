@@ -85,7 +85,7 @@ const Tabs = ({
         <Route path="/backtrack" render={() => <BacktrackPage />} exact />
         <Route path="/bookmarks" render={() => <BookmarksPage showToast={showToast} />} exact />
         <Route path="/read-later" render={() => <ReadLaterPage showToast={showToast} />} exact />
-        <Route path="/profile" render={() => <ProfilePage setSupportDrawer={setSupportDrawer} />} exact />
+        <Route path="/profile" render={() => <ProfilePage />} exact />
         <Route path="/profile/details" render={() => <MyProfileDetailsPage />} exact />
         <Route path="/profile/support" render={() => <SupportPage setSupportDrawer={setSupportDrawer} />} exact />
         <Route path="/notifications" render={() => <NotificationsPage />} exact />

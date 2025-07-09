@@ -171,17 +171,13 @@ const App = () => {
                 <Route path="/refund-policy" component={RefundPolicyPage} exact />
                 <Route path="/about-us" component={AboutUsPage} exact />
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
+                <Route path="/external-profile" component={ProfilePage} exact />
                 
                 {/* --- Private Routes --- */}
                 <PrivateRoute>
                   <Switch> {/* This Switch is crucial for ordering the private routes */}
                     
                     {/* Rule 1: The Profile page is accessible to any logged-in user. */}
-                    <Route
-                      path="/profile"
-                      render={() => <ProfilePage />}
-                      exact
-                    />
                     
                     {/* Rule 2: The main app (Tabs) requires an active subscription. */}
                     {/* This will catch all other private paths and check for a subscription. */}

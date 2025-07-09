@@ -24,7 +24,7 @@ const BridgeProfilePage = () => {
             if (error) {
               ionRouter.push('/login', 'root', 'replace');
             } else {
-              ionRouter.push('/profile', 'root', 'replace');
+              ionRouter.push('/external-profile', 'root', 'replace');
             }
           });
       } else {
