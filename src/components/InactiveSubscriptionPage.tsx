@@ -1,4 +1,4 @@
-import { IonPage, IonContent } from '@ionic/react';
+import { IonPage, IonContent, IonSpinner } from '@ionic/react';
 import { useState, useEffect } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { Swiper, SwiperSlide } from 'swiper/react';
@@ -12,6 +12,7 @@ import config from '../config';
 
 const InactiveSubscriptionPage = () => {
   const [session, setSession] = useState<Session | null>(null);
+  const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
 
   useEffect(() => {
     const { data: authListener } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -37,16 +38,20 @@ const InactiveSubscriptionPage = () => {
   ];
 
   const handleManageAccount = async () => {
-    const sessionResp = await supabase.auth.getSession();
-    const session = sessionResp.data.session;
+    setIsOpeningBrowser(true);
+    try {
+      const sessionResp = await supabase.auth.getSession();
+      const session = sessionResp.data.session;
 
-    if (session && session.access_token && session.refresh_token) {
-      const { access_token, refresh_token } = session;
+      if (session && session.access_token && session.refresh_token) {
+        const { access_token, refresh_token } = session;
 
-  
-      const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
-      await Browser.open({ url });
-    } else {
+    
+        const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
+        await Browser.open({ url });
+      }
+    } finally {
+      setIsOpeningBrowser(false);
     }
   };
 
@@ -118,9 +123,10 @@ const InactiveSubscriptionPage = () => {
         >
           <button
             onClick={handleManageAccount}
-            className="w-full max-w-md bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-full text-lg font-semibold shadow-lg shadow-blue-500/30 transition-colors duration-300"
+            className="w-full max-w-md bg-blue-600 hover:bg-blue-700 text-white py-3.5 rounded-full text-lg font-semibold shadow-lg shadow-blue-500/30 transition-colors duration-300 flex items-center justify-center"
+            disabled={isOpeningBrowser}
           >
-            Manage Account
+            {isOpeningBrowser ? <IonSpinner /> : 'Manage Account'}
           </button>
         </motion.div>
       </IonContent>

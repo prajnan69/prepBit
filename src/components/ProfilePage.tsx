@@ -1,7 +1,7 @@
 // src/pages/ProfilePage.tsx
 
 import { useState, useEffect, useRef } from 'react';
-import { IonPage, IonContent, useIonRouter, useIonViewWillEnter } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter, useIonViewWillEnter, IonSpinner } from '@ionic/react';
 import { supabase } from '../lib/supabaseClient';
 import { useProfile } from '../context/ProfileContext';
 import {
@@ -55,6 +55,7 @@ const ProfilePage = () => {
   const [showHoldIndicator, setShowHoldIndicator] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
+  const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
   const sessionRestored = useRef(false);
 
   useEffect(() => {
@@ -176,16 +177,20 @@ const ProfilePage = () => {
   };
 
   const handleManageAccount = async () => {
-    const sessionResp = await supabase.auth.getSession();
-    const session = sessionResp.data.session;
+    setIsOpeningBrowser(true);
+    try {
+      const sessionResp = await supabase.auth.getSession();
+      const session = sessionResp.data.session;
 
-    if (session && session.access_token && session.refresh_token) {
-      const { access_token, refresh_token } = session;
+      if (session && session.access_token && session.refresh_token) {
+        const { access_token, refresh_token } = session;
 
 
-      const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
-      await Browser.open({ url });
-    } else {
+        const url = `${config.API_BASE_URL}/bridge/profile?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
+        await Browser.open({ url });
+      }
+    } finally {
+      setIsOpeningBrowser(false);
     }
   };
 
@@ -249,13 +254,14 @@ const ProfilePage = () => {
             </div>
 
             <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
-              <div className="bg-white/30 backdrop-hue-rotate-180 backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4">
+              <div className={`bg-white/30 ${!Capacitor.isNativePlatform() && 'backdrop-hue-rotate-180'} backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4 transition-all duration-500`}>
                 {Capacitor.isNativePlatform() ? (
                   <Item
-                    icon={<Star size={20} className="text-yellow-500" />}
+                    icon={isOpeningBrowser ? <IonSpinner /> : <Star size={20} className="text-yellow-500" />}
                     bg="bg-yellow-100"
                     label="Manage Account"
                     onClick={handleManageAccount}
+                    disabled={isOpeningBrowser}
                   />
                 ) : (
                   <Item
@@ -284,10 +290,10 @@ const ProfilePage = () => {
   );
 };
 
-const Item = ({ icon, bg, label, value, onClick }: { icon: React.ReactNode; bg: string; label: string; value?: string; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void }) => {
+const Item = ({ icon, bg, label, value, onClick, disabled }: { icon: React.ReactNode; bg: string; label: string; value?: string; onClick?: (e: React.MouseEvent<HTMLButtonElement>) => void; disabled?: boolean }) => {
   const { triggerHaptic } = useHaptics();
   return (
-    <button onClick={(e) => { triggerHaptic(); onClick?.(e); }} className="w-full flex justify-between items-center p-3 rounded-xl hover:bg-gray-100/50 active:bg-gray-100 transition-colors duration-200">
+    <button onClick={(e) => { triggerHaptic(); onClick?.(e); }} className="w-full flex justify-between items-center p-3 rounded-xl hover:bg-gray-100/50 active:bg-gray-100 transition-colors duration-200" disabled={disabled}>
       <div className="flex items-center space-x-4">
         <div className={`${bg} p-2 rounded-lg`}>{icon}</div>
         <span className="font-medium text-black">{label}</span>
