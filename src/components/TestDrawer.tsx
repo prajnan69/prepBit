@@ -1,6 +1,8 @@
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import MCQ from './MCQ';
+import { supabase } from '../lib/supabaseClient';
+import { useAuth } from '../hooks/useAuth';
 
 interface TestDrawerProps {
   isOpen: boolean;
@@ -9,6 +11,39 @@ interface TestDrawerProps {
 }
 
 const TestDrawer = ({ isOpen, onClose, mcqs }: TestDrawerProps) => {
+  const { session } = useAuth();
+  const user = session?.user;
+
+  const handleAnswer = async (isCorrect: boolean) => {
+    if (!user) return;
+
+    const { data: stats, error } = await supabase
+      .from('user_stats')
+      .select('*')
+      .eq('user_id', user.id)
+      .single();
+
+    if (error && error.code !== 'PGRST116') { // PGRST116: 'No rows found'
+      console.error('Error fetching user stats:', error);
+      return;
+    }
+
+    if (stats) {
+      const updatedStats = {
+        mcqs_solved: stats.mcqs_solved + 1,
+        mcqs_correct: isCorrect ? stats.mcqs_correct + 1 : stats.mcqs_correct,
+      };
+      await supabase.from('user_stats').update(updatedStats).eq('user_id', user.id);
+    } else {
+      const newStats = {
+        user_id: user.id,
+        mcqs_solved: 1,
+        mcqs_correct: isCorrect ? 1 : 0,
+      };
+      await supabase.from('user_stats').insert(newStats);
+    }
+  };
+
   return (
     <AnimatePresence>
       {isOpen && (
@@ -34,7 +69,7 @@ const TestDrawer = ({ isOpen, onClose, mcqs }: TestDrawerProps) => {
               </button>
             </div>
             {mcqs.map((mcq, index) => (
-              <MCQ key={index} mcq={mcq} />
+              <MCQ key={index} mcq={mcq} onAnswer={handleAnswer} />
             ))}
           </motion.div>
         </motion.div>

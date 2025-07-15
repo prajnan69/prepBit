@@ -8,8 +8,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { FiBell, FiBookmark, FiFilter } from 'react-icons/fi';
 import { GraduationCap, Heart, Landmark, Leaf, Scale, Cpu } from 'lucide-react';
 import ArticleCard from './ArticleCard';
+import LiveFeedPage from './LiveFeedPage';
 import useScreenWidth from '../hooks/useScreenWidth';
 import { useHaptics } from '../hooks/useHaptics';
+import { useAuth } from '../hooks/useAuth';
 
 interface MainScreenProps {
   examType: string;
@@ -32,7 +34,9 @@ const tabs = [
 ];
 
 const MainScreen = ({ showToast }: MainScreenProps) => {
+  const { session } = useAuth();
   const [activeTab, setActiveTab] = useState(tabs[0].id);
+  const [liveFeedTime, setLiveFeedTime] = useState(0);
   const [showImportant, setShowImportant] = useState(false);
   const [isFilterDrawerOpen, setIsFilterDrawerOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
@@ -99,6 +103,40 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
       fetchNews();
     }
   }, [activeTab, fetchNews]);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (activeTab === 'live-feed') {
+      interval = setInterval(() => {
+        setLiveFeedTime(prevTime => prevTime + 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab]);
+
+  useEffect(() => {
+    const saveLiveFeedTime = async () => {
+      if (session?.user && liveFeedTime > 0 && liveFeedTime % 60 === 0) {
+        const { data: stats, error } = await supabase
+          .from('user_stats')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .single();
+
+        if (error && error.code !== 'PGRST116') {
+          console.error('Error fetching user stats:', error);
+          return;
+        }
+
+        if (stats) {
+          await supabase.from('user_stats').update({ time_spent_live_feed: stats.time_spent_live_feed + 60 }).eq('user_id', session.user.id);
+        } else {
+          await supabase.from('user_stats').insert({ user_id: session.user.id, time_spent_live_feed: 60 });
+        }
+      }
+    };
+    saveLiveFeedTime();
+  }, [liveFeedTime, session]);
 
   useEffect(() => {
     checkNotifications();
@@ -337,9 +375,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
                     )}
                   </div>
                 ) : (
-                  <div className="h-full flex items-center justify-center text-gray-500 pt-16">
-                    <p>Coming Soon</p>
-                  </div>
+                  <LiveFeedPage showToast={showToast} activeTab={activeTab} />
                 )}
               </motion.div>
             </AnimatePresence>

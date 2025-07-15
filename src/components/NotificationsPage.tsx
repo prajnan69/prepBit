@@ -53,7 +53,6 @@ const NotificationsPage = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'notifications', filter: `user_id=eq.${user.id}` },
         (payload) => {
-          console.log('Change received!', payload);
           if (payload.eventType === 'UPDATE') {
             setNotifications((prev) =>
               prev.map((notification) =>

@@ -7,9 +7,10 @@ interface MCQProps {
     options: string[];
     answer: string;
   };
+  onAnswer: (isCorrect: boolean) => void;
 }
 
-const MCQ = ({ mcq }: MCQProps) => {
+const MCQ = ({ mcq, onAnswer }: MCQProps) => {
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [isAnswered, setIsAnswered] = useState(false);
 
@@ -19,6 +20,7 @@ const MCQ = ({ mcq }: MCQProps) => {
     if (isAnswered) return;
     setSelectedOption(option);
     setIsAnswered(true);
+    onAnswer(option === mcq.answer);
   };
 
   const getButtonClass = (option: string) => {

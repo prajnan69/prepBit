@@ -113,8 +113,10 @@ const LoginPage = () => {
         .single();
 
       if (profileError && profileError.code === 'PGRST116') {
-        ionRouter.push('/additional-info', 'root', 'replace');
+        // New user, since no profile exists
+        ionRouter.push('/welcome', 'root', 'replace');
       } else if (profile) {
+        // Existing user
         ionRouter.push('/', 'root', 'replace');
       } else if (profileError) {
         setError(profileError.message);

@@ -76,7 +76,6 @@ const BacktrackPage = () => {
     try {
       const response = await fetch(searchUrl);
       const data = await response.json();
-      console.log('API Response:', data);
       setResults(data);
       triggerRefreshHaptic();
     } catch (error) {

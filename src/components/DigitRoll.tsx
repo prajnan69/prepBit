@@ -1,25 +1,76 @@
 import { motion } from 'framer-motion';
+import { cn } from '../lib/utils';
 
-const DigitRoll = ({ digit }: { digit: string }) => {
-  if (digit === '.') {
-    return <span className="h-8 w-6 text-3xl font-bold text-white">.</span>;
+const SIZES = {
+  '3xl': { height: 40, class: 'text-3xl' },
+  'xl': { height: 32, class: 'text-xl' },
+};
+
+const DIGIT_LIST = [...Array(10).keys()].reverse(); // [9,8,...,0]
+
+export default function DigitRoll({
+  from,
+  to,
+  size = '3xl',
+  isAnimating,
+  className,
+}: {
+  from: string;
+  to: string;
+  size?: keyof typeof SIZES;
+  isAnimating: boolean;
+  className?: string;
+}) {
+  const { height, class: textClass } = SIZES[size];
+  const fromDigit = parseInt(from);
+  const toDigit = parseInt(to);
+
+  const isDigit = !isNaN(toDigit);
+  if (!isDigit) {
+    return (
+      <span className={cn(`inline-block min-w-[1ch] font-bold text-white`, textClass, className)} style={{ height, lineHeight: `${height}px` }}>
+        {to}
+      </span>
+    );
   }
 
+  if (!isAnimating || from === to) {
+    return (
+      <span className={cn(`inline-block min-w-[1ch] font-bold text-white`, textClass, className)} style={{ height, lineHeight: `${height}px` }}>
+        {to}
+      </span>
+    );
+  }
+
+  const fromIndex = DIGIT_LIST.indexOf(fromDigit);
+  const toIndex = DIGIT_LIST.indexOf(toDigit);
+
   return (
-    <div className="h-8 w-6 overflow-hidden">
+    <div className="w-[1.2ch] overflow-hidden inline-block align-baseline" style={{ height }}>
       <motion.div
-        animate={{ y: -parseInt(digit) * 2 + 'rem' }}
-        transition={{ duration: 2, ease: 'easeInOut' }}
+        initial={{ y: -fromIndex * height }}
+        animate={{ y: -toIndex * height }}
+        transition={{
+          type: 'spring',
+          stiffness: 100,
+          damping: 20,
+        }}
         className="flex flex-col"
       >
-        {Array.from({ length: 10 }).map((_, i) => (
-          <span key={i} className="h-8 w-6 text-3xl font-bold text-white">
-            {i}
+        {DIGIT_LIST.map((digit) => (
+          <span
+            key={digit}
+            className={cn(
+              'font-bold text-white text-center min-w-[1ch]',
+              textClass,
+              className
+            )}
+            style={{ height, lineHeight: `${height}px` }}
+          >
+            {digit}
           </span>
         ))}
       </motion.div>
     </div>
   );
-};
-
-export default DigitRoll;
+}

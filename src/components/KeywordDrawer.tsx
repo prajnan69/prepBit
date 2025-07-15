@@ -1,4 +1,5 @@
 // ✅ KeywordDrawer.tsx
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
@@ -15,6 +16,25 @@ interface KeywordDrawerProps {
 
 const KeywordDrawer = ({ isOpen, onClose, keyword, content, loading }: KeywordDrawerProps) => {
   const { triggerHaptic } = useHaptics();
+  const [timer, setTimer] = useState(20);
+
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (loading && isOpen) {
+      setTimer(20); // Reset timer
+      interval = setInterval(() => {
+        setTimer((prevTimer) => {
+          if (prevTimer === 1) {
+            clearInterval(interval);
+            return 0;
+          }
+          return prevTimer - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [loading, isOpen]);
+
   const components = {
     p: ({ node, children, ...props }: any) => {
       const containsHeading = Array.isArray(children) && children.some(
@@ -86,6 +106,7 @@ const KeywordDrawer = ({ isOpen, onClose, keyword, content, loading }: KeywordDr
             {loading ? (
               <div className="flex justify-center items-center h-32">
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+                {timer > 0 && <span className="ml-4 text-gray-500">{timer}s</span>}
               </div>
             ) : (
               <motion.div

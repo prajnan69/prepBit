@@ -28,7 +28,10 @@ import { useAuth } from './hooks/useAuth';
 import NotificationToast from './components/NotificationToast';
 import BridgeProfilePage from './components/BridgeProfilePage';
 import PrivateRoute from './components/PrivateRoute';
-import ProfilePage from './components/ProfilePage'; 
+import ProfilePage from './components/ProfilePage';
+import ValuePropositionPage from './components/ValuePropositionPage';
+import OnboardingPage from './components/Onboarding/OnboardingPage';
+import ContactUsPage from './components/ContactUsPage';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -162,6 +165,8 @@ const App = () => {
                 <Route path="/privacy-policy" component={PrivacyPolicyPage} exact />
                 <Route path="/delete-account" component={DeleteAccountPage} exact />
                 <Route path="/login" component={LoginPage} exact />
+                <Route path="/welcome" component={ValuePropositionPage} exact />
+                <Route path="/onboarding" component={OnboardingPage} exact />
                 <Route path="/additional-info" component={AdditionalInfoPage} exact />
                 <Route path="/time-selection" component={TimeSelectionPage} exact />
                 <Route path="/install" component={PlayStoreRedirectPage} exact />
@@ -170,6 +175,7 @@ const App = () => {
                 <Route path="/terms-and-conditions" component={TermsAndConditionsPage} exact />
                 <Route path="/refund-policy" component={RefundPolicyPage} exact />
                 <Route path="/about-us" component={AboutUsPage} exact />
+                <Route path="/contact-us" component={ContactUsPage} exact />
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
                 <Route path="/external-profile" component={ProfilePage} exact />
                 
@@ -185,6 +191,7 @@ const App = () => {
                       path="/" 
                       component={() => <Tabs examType={examType} showToast={showToastWithMessage} setSupportDrawer={setSupportDrawer} />} 
                       requireActiveSubscription={true}
+                      showToast={showToastWithMessage}
                     />
 
                   </Switch>

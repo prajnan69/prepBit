@@ -37,5 +37,27 @@ export const useHaptics = () => {
     }
   };
 
-  return { triggerHaptic, triggerRefreshHaptic, triggerErrorHaptic, triggerArticleLoadHaptic };
+  const triggerPriceAnimationHaptic = async (duration: number) => {
+    const platform = Capacitor.getPlatform();
+    if (platform === 'android') {
+      const startTime = Date.now();
+      const endTime = startTime + duration;
+      let interval = 50;
+
+      const executeVibration = async () => {
+        if (Date.now() < endTime) {
+          await Haptics.vibrate({ duration: 15 });
+          interval = Math.min(interval + 10, 500); // Increase interval over time
+          setTimeout(executeVibration, interval);
+        }
+      };
+
+      executeVibration();
+    } else {
+      // iOS doesn't support custom vibration patterns, so we'll use a light impact.
+      await Haptics.impact({ style: ImpactStyle.Light });
+    }
+  };
+
+  return { triggerHaptic, triggerRefreshHaptic, triggerErrorHaptic, triggerArticleLoadHaptic, triggerPriceAnimationHaptic };
 };

@@ -203,6 +203,57 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
       td: (props: any) => <td className="border border-gray-300 px-4 py-2" {...props} />,
     };
 
+    const renderWithKeywords = (markdown: string, keywords: string[]) => {
+      if (!keywords || keywords.length === 0) {
+        return <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>;
+      }
+  
+      const componentsWithKeywords = {
+        ...components,
+        p: ({ node, ...props }: any) => {
+          const children = props.children;
+          
+          if (!children || !Array.isArray(children)) {
+            return <p {...props}>{children}</p>;
+          }
+  
+          const processChildren = (nodes: any[]): any[] => {
+            return nodes.flatMap((child: any, index: number) => {
+              if (typeof child === 'string') {
+                const regex = new RegExp(`(${keywords.join('|')})`, 'gi');
+                const parts = child.split(regex);
+                return parts.map((part, i) => {
+                  const isKeyword = typeof part === 'string' && keywords.some(kw => kw && kw.toLowerCase() === part.toLowerCase());
+                  if (isKeyword) {
+                    return (
+                      <Keyword key={`${index}-${i}`} keyword={part} article={article}>
+                        {part}
+                      </Keyword>
+                    );
+                  }
+                  return part;
+                });
+              }
+              if (child.props && child.props.children) {
+                return {
+                  ...child,
+                  props: {
+                    ...child.props,
+                    children: processChildren(Array.isArray(child.props.children) ? child.props.children : [child.props.children])
+                  }
+                };
+              }
+              return child;
+            });
+          };
+  
+          return <p {...props}>{processChildren(children)}</p>;
+        },
+      };
+  
+      return <ReactMarkdown components={componentsWithKeywords} remarkPlugins={[remarkGfm]}>{markdown}</ReactMarkdown>;
+    };
+
     if (!article) {
       return (
         <div className="flex justify-center items-center h-32">
@@ -221,7 +272,15 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
           ? <div className="flex flex-col justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
               {showNotifyButton && (
-                <div className="fixed bottom-20 left-0 right-0 flex justify-center">
+                <div className="fixed bottom-20 left-0 right-0 flex flex-col items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 bg-blue-100 border border-blue-200 text-blue-800 rounded-lg text-xs text-center max-w-xs"
+                  >
+                    <p className="font-semibold">You're the first to see this!</p>
+                    <p>We're gathering the relevant parts, which takes about a minute. This is a one-time process.</p>
+                  </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -260,7 +319,15 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
           ? <div className="flex flex-col justify-center items-center h-32">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
               {showNotifyButton && (
-                <div className="fixed bottom-20 left-0 right-0 flex justify-center">
+                <div className="fixed bottom-20 left-0 right-0 flex flex-col items-center justify-center">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-4 p-3 bg-blue-100 border border-blue-200 text-blue-800 rounded-lg text-xs text-center max-w-xs"
+                  >
+                    <p className="font-semibold">You're the first to see this!</p>
+                    <p>We're gathering the relevant parts, which takes about a minute. This is a one-time process. You can press notify button and enjoy we will send the loaded article straight to your notification</p>
+                  </motion.div>
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -290,9 +357,7 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
               )}
             </div>
           : <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
-              <ReactMarkdown components={components} remarkPlugins={[remarkGfm]}>
-                {mainsData?.markdown}
-              </ReactMarkdown>
+              {mainsData ? renderWithKeywords(mainsData.markdown, mainsData.keywords) : null}
             </motion.div>;
       default:
         return <p>Coming soon.</p>;

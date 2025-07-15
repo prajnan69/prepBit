@@ -118,6 +118,7 @@ const TermsAndConditionsPage = () => {
         <p>If you have any questions about these Terms and Conditions, You can contact us:</p>
         <ul>
           <li>By email: support@prepbit.academy</li>
+          <li><a href="/contact-us" className="text-blue-500 hover:underline">Or click here to reach us out.</a></li>
         </ul>
       </IonContent>
     </IonPage>
