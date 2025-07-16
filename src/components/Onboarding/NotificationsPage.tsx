@@ -3,6 +3,7 @@ import { Capacitor } from '@capacitor/core';
 import { PushNotifications } from '@capacitor/push-notifications';
 import { useHaptics } from '../../hooks/useHaptics';
 import { supabase } from '../../lib/supabaseClient';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface NotificationsPageProps {
   onContinue: (settings: Record<string, boolean>) => void;
@@ -55,23 +56,61 @@ const NotificationsPage = ({ onContinue }: NotificationsPageProps) => {
     setNotificationSettings((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const [image, setImage] = useState('https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_notifications_off.png');
+
   const handleContinue = async () => {
     triggerHaptic();
-    if (Capacitor.isNativePlatform()) {
-      const permStatus = await PushNotifications.requestPermissions();
+    setImage('https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_notifications_on.png');
+    setTimeout(async () => {
+      if (Capacitor.isNativePlatform()) {
+        const permStatus = await PushNotifications.requestPermissions();
 
-      if (permStatus.receive === 'granted') {
-        await PushNotifications.register();
+        if (permStatus.receive === 'granted') {
+          await PushNotifications.register();
+          onContinue(notificationSettings);
+        } else {
+          onContinue({
+            dailySummary: false,
+            importantMaterials: false,
+            importantArticles: false,
+            streakUpdates: false,
+          });
+        }
       } else {
+        // PWA/Web notifications
+        if ('Notification' in window) {
+          const permission = await Notification.requestPermission();
+          if (permission === 'granted') {
+            onContinue(notificationSettings);
+          } else {
+            onContinue({
+              dailySummary: false,
+              importantMaterials: false,
+              importantArticles: false,
+              streakUpdates: false,
+            });
+          }
+        } else {
+          onContinue(notificationSettings);
+        }
       }
-    }
-
-    onContinue(notificationSettings);
+    }, 1000);
   };
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 p-6 text-center">
       <div className="flex-grow flex flex-col items-center justify-center">
+        <div className="w-full max-w-xs mx-auto mb-8 h-48">
+          <motion.img
+            key={image}
+            src={image}
+            alt="Notifications"
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="w-full h-full object-contain"
+          />
+        </div>
         <h1 className="text-3xl font-bold mb-4">Stay Ahead of the Curve</h1>
         <p className="text-lg text-gray-600 mb-8">
           Commit to your goals. Let us help you stay on track with timely updates.

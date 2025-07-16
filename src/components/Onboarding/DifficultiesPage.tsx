@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useHaptics } from '../../hooks/useHaptics';
 import { topics } from '../../lib/topics';
+import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 
 interface DifficultiesPageProps {
   interests: string[];
@@ -10,9 +11,31 @@ interface DifficultiesPageProps {
 const DifficultiesPage = ({ interests, onContinue }: DifficultiesPageProps) => {
   const [selectedDifficulties, setSelectedDifficulties] = useState<string[]>([]);
   const { triggerHaptic } = useHaptics();
+  const controls = useAnimation();
+
+  useEffect(() => {
+    controls.start({
+      x: '50%',
+      transition: { duration: 0.5, ease: 'easeOut' },
+    });
+  }, [controls]);
 
   const toggleDifficulty = (difficulty: string) => {
     triggerHaptic();
+    if (interests.includes(difficulty)) {
+      controls.start({
+        x: '25%',
+        transition: { duration: 0.5, ease: 'easeOut' },
+      }).then(() => {
+        setTimeout(() => {
+          controls.start({
+            x: '50%',
+            transition: { duration: 0.5, ease: 'easeOut' },
+          });
+        }, 2000);
+      });
+      return;
+    }
     setSelectedDifficulties((prev) =>
       prev.includes(difficulty)
         ? prev.filter((i) => i !== difficulty)
@@ -66,6 +89,18 @@ const DifficultiesPage = ({ interests, onContinue }: DifficultiesPageProps) => {
         >
           I don't find anything difficult
         </button>
+        <AnimatePresence>
+          <motion.img
+            id="difficulty-owl"
+            src="https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_difficulties.png"
+            alt="Owl"
+            initial={{ x: '100vw' }}
+            animate={controls}
+            exit={{ x: '100vw' }}
+            transition={{ duration: 0.5, ease: 'easeOut' }}
+            className="absolute right-0 bottom-20 w-1/2 md:w-1/3"
+          />
+        </AnimatePresence>
       </div>
     </div>
   );

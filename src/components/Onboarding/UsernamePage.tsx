@@ -4,6 +4,7 @@ import debounce from 'lodash.debounce';
 import { CSSTransition } from 'react-transition-group';
 import { useHaptics } from '../../hooks/useHaptics';
 import { useProfile } from '../../context/ProfileContext';
+import { motion, AnimatePresence } from 'framer-motion';
 import './UsernamePage.css';
 
 interface UsernamePageProps {
@@ -83,8 +84,19 @@ const UsernamePage = ({ name, onContinue }: UsernamePageProps) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 p-6 text-center">
-      <div className="flex-grow flex flex-col items-center justify-center">
+    <div className="flex flex-col h-screen bg-gray-50 p-6 text-center overflow-hidden">
+      <AnimatePresence>
+        <motion.img
+          src="https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_username.png"
+          alt="Owl"
+          initial={{ y: '-100vh' }}
+          animate={{ y: 0 }}
+          exit={{ y: '-100vh' }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="absolute top-0 left-0 w-1/3"
+        />
+      </AnimatePresence>
+      <div className="flex-grow flex flex-col items-center justify-center relative">
         <h1 className="text-3xl font-bold mb-4">Hi {name} 👋</h1>
         <p className="text-lg text-gray-600 mb-8">This will be displayed on your profile.</p>
 
@@ -130,7 +142,7 @@ const UsernamePage = ({ name, onContinue }: UsernamePageProps) => {
           </div>
         </div>
       </div>
-      <div className="flex-shrink-0">
+      <div className="flex-shrink-0 relative">
         <button
           onClick={handleContinue}
           disabled={!username || !isAvailable || buttonText !== 'Continue'}

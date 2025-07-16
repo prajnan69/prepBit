@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useHaptics } from '../../hooks/useHaptics';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface FullNamePageProps {
   onContinue: (name: string) => void;
@@ -17,8 +18,18 @@ const FullNamePage = ({ onContinue }: FullNamePageProps) => {
   return (
     // Use a clean white background and add padding for spacing from screen edges.
     // Use flexbox to structure the layout with a main content area and a footer button.
-    <div className="flex flex-col h-screen bg-white p-6 font-sans">
-      
+    <div className="flex flex-col h-screen bg-white p-6 font-sans overflow-hidden">
+      <AnimatePresence>
+        <motion.img
+          src="https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_fullname.png"
+          alt="Owl"
+          initial={{ x: '100vw' }}
+          animate={{ x: '50%' }}
+          exit={{ x: '100vw' }}
+          transition={{ duration: 0.5, ease: 'easeOut', delay: 1 }}
+          className="absolute right-0 bottom-0 w-1/2 md:w-1/3"
+        />
+      </AnimatePresence>
       {/* Main content area that grows to fill available space */}
       <div className="flex-grow flex flex-col justify-center items-center">
         <div className="w-full max-w-xs text-center">

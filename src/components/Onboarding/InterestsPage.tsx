@@ -1,10 +1,39 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useHaptics } from '../../hooks/useHaptics';
 import { topics } from '../../lib/topics';
+import { motion, AnimatePresence } from 'framer-motion';
+import { getRandomImageUrl } from '../../lib/imageUtils';
 
 interface InterestsPageProps {
   onContinue: (interests: string[]) => void;
 }
+
+const InterestPill = ({ topic, selected, onClick }: { topic: string; selected: boolean; onClick: () => void }) => {
+  const imageUrl = useMemo(() => getRandomImageUrl(), []);
+
+  return (
+    <button
+      onClick={onClick}
+      className={`relative px-4 py-2 rounded-full text-sm font-medium transition-colors ${
+        selected ? 'bg-blue-600 text-white' : 'bg-gray-200 text-gray-700'
+      }`}
+    >
+      {topic}
+      <AnimatePresence>
+        {selected && (
+          <motion.img
+            src={imageUrl}
+            alt="Selected"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0, opacity: 0 }}
+            className="absolute -right-5 -top-2 w-10 h-10"
+          />
+        )}
+      </AnimatePresence>
+    </button>
+  );
+};
 
 const InterestsPage = ({ onContinue }: InterestsPageProps) => {
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
@@ -36,17 +65,12 @@ const InterestsPage = ({ onContinue }: InterestsPageProps) => {
         <p className="text-md text-gray-600 text-center mb-6">What topics do you like in your exam?</p>
         <div className="flex flex-wrap gap-2 justify-center mb-8">
           {topics.map((topic) => (
-            <button
+            <InterestPill
               key={topic}
+              topic={topic}
+              selected={selectedInterests.includes(topic)}
               onClick={() => toggleInterest(topic)}
-              className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
-                selectedInterests.includes(topic)
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-200 text-gray-700'
-              }`}
-            >
-              {topic}
-            </button>
+            />
           ))}
         </div>
       </div>

@@ -114,7 +114,15 @@ const TimeSelectionPage = ({ onContinue }: TimeSelectionPageProps) => {
         </div>
       </div>
 
-      <div className="flex-shrink-0 w-full max-w-xs mx-auto pb-4">
+      <div className="flex-shrink-0 w-full max-w-xs mx-auto pb-4 relative">
+        <motion.img
+          src="https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_time.png"
+          alt="Time"
+          initial={{ x: '-100vw' }}
+          animate={{ x: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="absolute bottom-16 -left-10 w-32 h-32"
+        />
         <button
           onClick={() => {
             triggerHaptic();

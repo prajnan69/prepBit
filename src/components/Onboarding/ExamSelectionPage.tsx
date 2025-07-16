@@ -54,7 +54,7 @@ const ExamSelectionPage = ({ onContinue }: ExamSelectionPageProps) => {
 
   const itemVariants = {
     hidden: { y: 20, opacity: 0 },
-    visible: { y: 0, opacity: 1, transition: { type: 'spring', stiffness: 100 } },
+    visible: { y: 0, opacity: 1, transition: { type: 'spring' as const, stiffness: 100 } },
   };
 
   return (
@@ -84,18 +84,15 @@ const ExamSelectionPage = ({ onContinue }: ExamSelectionPageProps) => {
                             }`}
               >
                 {exam}
-                <AnimatePresence>
-                  {selectedExam === exam && (
-                    <motion.div
-                      initial={{ opacity: 0, scale: 0.5 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.5 }}
-                      className="absolute right-4 top-6 -translate-y-1/2 p-1 rounded-full bg-indigo-500 text-white"
-                    >
-                      <CheckIcon className="w-4 h-4" />
-                    </motion.div>
-                  )}
-                </AnimatePresence>
+                {selectedExam === exam && (
+                  <motion.img
+                    layoutId="selected-exam-owl"
+                    src="https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_examselection.png"
+                    alt="Selected"
+                    transition={{ type: 'spring', stiffness: 200, damping: 20, duration: 0.5 }}
+                    className="absolute right-4 top-1/3 -translate-y-1/2 w-12 h-12"
+                  />
+                )}
               </motion.button>
             ))}
           </motion.div>

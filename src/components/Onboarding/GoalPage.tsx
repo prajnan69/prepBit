@@ -42,8 +42,16 @@ const GoalPage = ({ onContinue }: GoalPageProps) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-50 p-6 text-center">
-      <div className="flex-grow flex flex-col items-center justify-center">
+    <div className="flex flex-col h-screen bg-gray-50 p-6 text-center overflow-hidden">
+      <div className="flex-grow flex flex-col items-center justify-center relative">
+        <motion.img
+          src="https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_goal.png"
+          alt="Goal"
+          initial={{ y: '-100vh' }}
+          animate={{ y: 0 }}
+          transition={{ duration: 0.5, ease: 'easeOut' }}
+          className="w-full"
+        />
         <h1 className="text-3xl font-bold mb-8">What is your goal?</h1>
         <div className="w-full max-w-sm">
           {wittyMessage ? (

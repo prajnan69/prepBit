@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useIonRouter } from '@ionic/react';
 import { supabase } from '../../lib/supabaseClient';
@@ -27,6 +27,7 @@ interface UserData {
 
 const OnboardingPage = () => {
   const [step, setStep] = useState(1);
+  const [imagesLoaded, setImagesLoaded] = useState(false);
   const [userData, setUserData] = useState<UserData>({
     name: '',
     username: '',
@@ -40,6 +41,40 @@ const OnboardingPage = () => {
     updateTime: '09:00',
   });
   const ionRouter = useIonRouter();
+
+  useEffect(() => {
+    const imageUrls = [
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_fullname.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_username.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_examselection.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_interests.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_difficulties.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_goal.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_notifications_on.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_notifications_off.png',
+      'https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/userdetails//onboarding_time.png',
+    ];
+
+    const preloadImages = async () => {
+      const promises = imageUrls.map((src) => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.src = src;
+          img.onload = resolve;
+          img.onerror = reject;
+        });
+      });
+
+      try {
+        await Promise.all(promises);
+        setImagesLoaded(true);
+      } catch (error) {
+        console.error('Failed to preload images', error);
+      }
+    };
+
+    preloadImages();
+  }, []);
 
   const nextStep = () => setStep(step + 1);
 
