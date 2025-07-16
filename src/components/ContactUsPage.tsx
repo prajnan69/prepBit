@@ -89,6 +89,12 @@ const ContactUsPage = () => {
                 >
                   Have a question? We'd love to hear from you.
                 </motion.p>
+                <motion.p
+                  variants={itemVariants}
+                  className="text-gray-600 text-center mb-8"
+                >
+                   PrepBit
+                </motion.p>
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <motion.div variants={itemVariants}>
                     <label htmlFor="name" className="sr-only">Name</label>

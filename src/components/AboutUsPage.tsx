@@ -27,6 +27,7 @@ const AboutUsPage = () => {
             <p className="text-xl text-gray-600 mt-6 max-w-3xl mx-auto">
               PrepBit is your ultimate co-pilot for conquering civil service and other competitive exams. We cut through the noise, delivering precisely what you need to excel.
             </p>
+            <p className="text-sm text-gray-500 mt-4">PrepBit</p>
           </motion.div>
 
           <div className="grid md:grid-cols-2 gap-12">
