@@ -254,7 +254,7 @@ const ProfilePage = () => {
             </div>
 
             <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
-              <div className={`bg-white/30 ${!Capacitor.isNativePlatform() && 'backdrop-hue-rotate-180'} backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4 transition-all duration-500`}>
+              {/* <div className={`bg-white/30 ${!Capacitor.isNativePlatform() && 'backdrop-hue-rotate-180'} backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4 transition-all duration-500`}>
                 {Capacitor.isNativePlatform() ? (
                   <Item
                     icon={isOpeningBrowser ? <IonSpinner /> : <Star size={20} className="text-yellow-500" />}
@@ -271,7 +271,7 @@ const ProfilePage = () => {
                     onClick={() => ionRouter.push('/subscribe', 'root')}
                   />
                 )}
-              </div>
+              </div> */}
 
               <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 space-y-1">
                 <Item icon={<User size={20} className="text-blue-500" />} bg="bg-blue-100" label="My Profile" value={profile?.username} onClick={() => ionRouter.push('/profile/details')} />
