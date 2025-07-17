@@ -276,6 +276,10 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
           }} className="w-full mt-3 py-1 text-slate-500 hover:text-slate-300 font-medium transition">
             View Other Plans
           </button>
+          <div className="text-center mt-4">
+            <a href="/refund-policy" className="text-xs text-slate-500 hover:underline">Refund Policy</a>
+          </div>
+          
         </div>
       </div>
 

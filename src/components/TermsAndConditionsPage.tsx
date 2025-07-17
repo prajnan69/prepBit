@@ -34,7 +34,7 @@ const TermsAndConditionsPage = () => {
             <p><strong>Country</strong> refers to: Karnataka, India</p>
           </li>
           <li>
-            <p><strong>Company</strong> (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to PrepBit, Legal Name: PrepBit.</p>
+            <p><strong>Company</strong> (referred to as either "the Company", "We", "Us" or "Our" in this Agreement) refers to PrepBit, Legal Name: C PRAJNAN.</p>
           </li>
           <li>
             <p><strong>Device</strong> means any device that can access the Service such as a computer, a cellphone or a digital tablet.</p>

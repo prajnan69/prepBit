@@ -1,6 +1,9 @@
 import { IonPage, IonContent, IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton } from '@ionic/react';
+import config from '../config';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 const RefundPolicyPage = () => {
+  const platform = useDeviceType();
   return (
     <IonPage>
       <IonHeader>
@@ -28,7 +31,16 @@ const RefundPolicyPage = () => {
         <h2>Contact Us</h2>
         <p>If you have any questions about our Refund Policy, please contact us:</p>
         <ul>
-          <li>By email: support@prepbit.academy</li>
+          {config.SHOW_LEGAL_INFO && platform === 'web' && (
+            <>
+              <li>Legal Name: C Prajnan</li>
+              <li>By email: support@prepbit.academy</li>
+              <li>By phone number: 8660627034</li>
+            </>
+          )}
+          {!config.SHOW_LEGAL_INFO  && (
+            <li>By email: support@prepbit.academy</li>
+          )}
         </ul>
       </IonContent>
     </IonPage>

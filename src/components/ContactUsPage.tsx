@@ -3,9 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useHaptics } from '../hooks/useHaptics';
 import { FiSend, FiCheckCircle } from 'react-icons/fi';
 import { supabase } from '../lib/supabaseClient';
+import config from '../config';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 const ContactUsPage = () => {
   const { triggerHaptic } = useHaptics();
+  const platform = useDeviceType();
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -89,12 +92,13 @@ const ContactUsPage = () => {
                 >
                   Have a question? We'd love to hear from you.
                 </motion.p>
-                <motion.p
-                  variants={itemVariants}
-                  className="text-gray-600 text-center mb-8"
-                >
-                   PrepBit
-                </motion.p>
+                {config.SHOW_LEGAL_INFO && platform === 'web' && (
+                  <motion.div variants={itemVariants} className="text-center mb-8">
+                    <p className="text-gray-600">Legal Name: C Prajnan</p>
+                    <p className="text-gray-600">Email: support@prepbit.academy</p>
+                    <p className="text-gray-600">Mobile: 8660627034</p>
+                  </motion.div>
+                )}
                 <form onSubmit={handleSubmit} className="space-y-6">
                   <motion.div variants={itemVariants}>
                     <label htmlFor="name" className="sr-only">Name</label>
