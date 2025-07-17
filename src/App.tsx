@@ -170,7 +170,6 @@ const App = () => {
                 <Route path="/additional-info" component={AdditionalInfoPage} exact />
                 <Route path="/time-selection" component={TimeSelectionPage} exact />
                 <Route path="/install" component={PlayStoreRedirectPage} exact />
-                <Route path="/subscribe" component={SubscriptionPage} exact />
                 <Route path="/inactive-subscription" component={InactiveSubscriptionPage} exact />
                 <Route path="/terms-and-conditions" component={TermsAndConditionsPage} exact />
                 <Route path="/refund-policy" component={RefundPolicyPage} exact />
