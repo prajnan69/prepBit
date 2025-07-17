@@ -27,12 +27,18 @@ const MCQ = ({ mcq, onAnswer }: MCQProps) => {
     if (!isAnswered) {
       return 'bg-gray-100 hover:bg-gray-200';
     }
-    if (option === mcq.answer) {
+
+    const isCorrect = option === mcq.answer;
+    const isSelected = option === selectedOption;
+
+    if (isCorrect) {
       return 'bg-green-200';
     }
-    if (option === selectedOption) {
+
+    if (isSelected && !isCorrect) {
       return 'bg-red-200';
     }
+
     return 'bg-gray-100';
   };
 
