@@ -233,10 +233,11 @@ const LoginPage = () => {
         </div>
           </div>
         </div>
-        <div className="absolute bottom-4 w-full text-center flex justify-center gap-4">
-          <button onClick={() => ionRouter.push('/privacy-policy')} className="text-sm text-gray-500 underline">Privacy Policy</button>
-          <button onClick={() => ionRouter.push('/terms-and-conditions')} className="text-sm text-gray-500 underline">Terms and Conditions</button>
-          <button onClick={() => ionRouter.push('/about-us')} className="text-sm text-gray-500 underline">About Us</button>
+        <div className="absolute bottom-4 w-full text-center flex justify-center gap-2">
+          <button onClick={() => ionRouter.push('/privacy-policy')} className="text-xs text-gray-500 underline">Privacy Policy</button>
+          <button onClick={() => ionRouter.push('/terms-and-conditions')} className="text-xs text-gray-500 underline">Terms & Conditions</button>
+          <button onClick={() => ionRouter.push('/about-us')} className="text-xs text-gray-500 underline">About Us</button>
+          <button onClick={() => ionRouter.push('/contact-us')} className="text-xs text-gray-500 underline">Contact Us</button>
         </div>
       </IonContent>
     </IonPage>
