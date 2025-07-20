@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useIonRouter } from '@ionic/react';
 import { motion, AnimatePresence, type Variants, useMotionValue, useTransform, animate } from 'framer-motion';
 import config from '../../config';
 import { Hourglass } from 'lucide-react';
@@ -24,6 +25,7 @@ interface Plan {
   price: string;
   period: string;
   subtitle: string;
+  description: string;
   save?: string;
   extra?: string;
 }
@@ -51,6 +53,7 @@ const AnimatedPrice = ({ from, to }: { from: number, to: number }) => {
 };
 
 const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
+  const ionRouter = useIonRouter();
   const { triggerHaptic, triggerErrorHaptic, triggerPriceAnimationHaptic } = useHaptics();
   const [selectedPlan, setSelectedPlan] = useState<string>('prepbit-yearly');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -80,13 +83,20 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
               const isTrial = plan.prepaidBasePlanType?.billingPeriodDuration === 'P1D';
               let perDayPrice;
               let subtitle;
+              let description;
 
               if (isTrial) {
                 perDayPrice = price.units;
                 subtitle = `One-time access for 24 hours`;
+                description = "Explore all our premium features for a full 24 hours. A perfect way to see if we're the right fit for you.";
+              } else if (isYearly) {
+                perDayPrice = (price.units / 365).toFixed(2);
+                subtitle = `Billed as ₹${price.units} per year`;
+                description = 'Commit to your success and save big. Get a full year of uninterrupted access to all our premium features.';
               } else {
-                perDayPrice = isYearly ? (price.units / 365).toFixed(2) : (price.units / 31).toFixed(2);
-                subtitle = `Billed as ₹${price.units} per ${isYearly ? 'year' : 'month'}`;
+                perDayPrice = (price.units / 31).toFixed(2);
+                subtitle = `Billed as ₹${price.units} per month`;
+                description = 'Stay flexible with our monthly plan. Get full access to all premium features with the ability to cancel anytime.';
               }
 
               const planData = {
@@ -95,6 +105,7 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
                 price: `₹${perDayPrice}`,
                 period: '/ day',
                 subtitle: subtitle,
+                description: description,
               };
 
               if (plan.basePlanId.includes('-promo-base')) {
@@ -274,7 +285,7 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
             triggerHaptic();
             setIsDrawerOpen(true);
           }} className="w-full mt-3 py-1 text-slate-500 hover:text-slate-300 font-medium transition">
-            View Other Plans
+            View More
           </button>
           <div className="text-center mt-4">
             <a href="/refund-policy" className="text-xs text-slate-500 hover:underline">Refund Policy</a>
@@ -318,6 +329,13 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
                     <div>
                       <p className="font-bold text-white text-lg">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].title : plan.title}</p>
                       <p className="text-sm text-slate-400">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].subtitle : plan.subtitle}</p>
+                      <p className="text-xs text-slate-300 mt-1">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].description : plan.description}</p>
+                      <button onClick={(e) => {
+                        e.stopPropagation();
+                        ionRouter.push('/all-plans');
+                      }} className="text-xs text-indigo-400 hover:underline mt-2">
+                        Read More
+                      </button>
                       {plan.id.includes('trial') && promoStatus.isValid && (
                         <p className="text-xs text-yellow-300 mt-1">Only monthly and yearly subscriptions can use the promo code.</p>
                       )}
