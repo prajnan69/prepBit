@@ -32,6 +32,7 @@ import ProfilePage from './components/ProfilePage';
 import ValuePropositionPage from './components/ValuePropositionPage';
 import OnboardingPage from './components/Onboarding/OnboardingPage';
 import ContactUsPage from './components/ContactUsPage';
+import PaywallPage from './components/Onboarding/PaywallPage';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -175,6 +176,7 @@ const App = () => {
                 <Route path="/refund-policy" component={RefundPolicyPage} exact />
                 <Route path="/about-us" component={AboutUsPage} exact />
                 <Route path="/contact-us" component={ContactUsPage} exact />
+                <Route path="/pricing" component={PaywallPage} exact />
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
                 <Route path="/external-profile" component={ProfilePage} exact />
                 
