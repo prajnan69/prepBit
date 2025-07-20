@@ -285,7 +285,7 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
             triggerHaptic();
             setIsDrawerOpen(true);
           }} className="w-full mt-3 py-1 text-slate-500 hover:text-slate-300 font-medium transition">
-            View More
+            View More Plans
           </button>
           <div className="text-center mt-4">
             <a href="/refund-policy" className="text-xs text-slate-500 hover:underline">Refund Policy</a>
