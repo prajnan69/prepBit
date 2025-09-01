@@ -16,8 +16,6 @@ const OtpInput = ({ length, onComplete, status = 'default', onInputChange, disab
   const handleChange = (element: HTMLInputElement, index: number) => {
     if (isNaN(Number(element.value))) return;
 
-    triggerHaptic();
-
     if (onInputChange) {
       onInputChange();
     }

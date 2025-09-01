@@ -34,6 +34,8 @@ import OnboardingPage from './components/Onboarding/OnboardingPage';
 import ContactUsPage from './components/ContactUsPage';
 import PaywallPage from './components/Onboarding/PaywallPage';
 import AllPlansPage from './components/AllPlansPage';
+import AffiliateOnboardingPage from './components/AffiliateOnboardingPage';
+import AffiliateDashboardPage from './components/AffiliateDashboardPage';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -179,6 +181,8 @@ const App = () => {
                 <Route path="/contact-us" component={ContactUsPage} exact />
                 <Route path="/pricing" component={PaywallPage} exact />
                 <Route path="/all-plans" component={AllPlansPage} exact />
+                <Route path="/affiliate-onboarding" component={AffiliateOnboardingPage} exact />
+                <Route path="/affiliate-dashboard" component={AffiliateDashboardPage} exact />
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
                 <Route path="/external-profile" component={ProfilePage} exact />
                 

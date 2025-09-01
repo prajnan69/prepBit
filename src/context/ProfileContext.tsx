@@ -10,6 +10,7 @@ interface Profile {
   exam: string;
   state: string;
   subscription_status: string;
+  phone: string;
 }
 
 interface ProfileContextType {
@@ -52,6 +53,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       fetchProfile();
     } else {
       setProfile(null);
+      setLoading(false);
     }
   }, [session]);
 

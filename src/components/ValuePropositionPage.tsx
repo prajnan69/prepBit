@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { useHaptics } from '../hooks/useHaptics';
 import NewsSection from './ValueProposition/NewsSection';
@@ -12,6 +12,20 @@ const ValuePropositionPage = () => {
   const [step, setStep] = useState(1);
   const { triggerHaptic } = useHaptics();
   const ionRouter = useIonRouter();
+
+  useEffect(() => {
+    const images = [
+      "https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/prelanding//prelanding_1.webp",
+      "https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/prelanding//prelanding_2.webp",
+      "https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/prelanding//prelanding_3.webp",
+      "https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/prelanding//prelanding_4.webp",
+      "https://jmdzllonlxmssozvnstd.supabase.co/storage/v1/object/public/prelanding//prelanding_5.webp"
+    ];
+
+    images.forEach((image) => {
+      new Image().src = image;
+    });
+  }, []);
 
   const nextStep = () => {
     triggerHaptic();

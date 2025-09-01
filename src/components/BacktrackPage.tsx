@@ -93,15 +93,6 @@ const BacktrackPage = () => {
         className="relative !bg-black text-white"
         style={{ '--background': '#000000', overflow: 'hidden' }}
       >
-        {expandedCard && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-20 bg-black/30 backdrop-blur-lg"
-            onClick={() => setExpandedCard(null)}
-          />
-        )}
         <StarryBackground />
         <motion.div
           initial={{ scale: 1.5, opacity: 0 }}
@@ -155,65 +146,68 @@ const BacktrackPage = () => {
             ) : (
               <div className="relative w-full h-full">
                 {results.map((result: any, index: number) => (
-                  <motion.div
-                    key={result.question_text}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    onDragEnd={(_, info) => {
-                      if (info.offset.x > 100) {
-                        triggerHaptic();
-                        setResults(results.slice(1));
-                        if (!hasSwiped) setHasSwiped(true);
-                      }
-                    }}
-                    initial={{ scale: 1, y: 0, rotate: 0 }}
-                    animate={
-                      expandedCard === result.question_text
-                        ? { scale: 1.2, y: -40, zIndex: 30 }
-                        : {
-                            scale: 1 - Math.min(index, 3) * 0.05,
-                            y: index * 10,
-                            zIndex: results.length - index,
-                          }
-                    }
-                    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-                    className={`absolute w-full h-full bg-gray-900/70 backdrop-blur-lg p-8 rounded-3xl border border-gray-700 shadow-2xl cursor-grab active:cursor-grabbing ${
-                      expandedCard === result.question_text ? 'overflow-y-auto' : 'overflow-hidden'
-                    }`}
-                    style={{
-                      transformOrigin: 'bottom center',
-                    }}
-                    onClick={() => {
-                      if (index === 0) {
-                        if (expandedCard === result.question_text) {
-                          setExpandedCard(null);
-                        } else {
-                          setExpandedCard(result.question_text);
-                        }
-                      }
-                    }}
-                  >
-                    {result.question_type === 'MCQ' ? (
-                      <div>
-                        <p className="text-gray-200 text-lg leading-relaxed">{result.stem}</p>
-                        <div className="mt-4 space-y-2">
-                          {Object.entries(result.options).map(([key, value]) => (
-                            <div key={key} className="flex items-center">
-                              <span className="text-gray-400 mr-2">{key}.</span>
-                              <p className="text-gray-300">{value as string}</p>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    ) : (
-                      <p className="text-gray-200 text-lg leading-relaxed">{result.question_text}</p>
-                    )}
-                    <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
-                      <span>{result.exam_type} - {result.paper} - {result.question_type}</span>
-                      <span>{result.year?.$numberInt || result.year}</span>
-                    </div>
-                  </motion.div>
-                ))}
+  <motion.div
+    key={result.question_text}
+    drag="x"
+    dragConstraints={{ left: 0, right: 0 }}
+    onDragEnd={(_, info) => {
+      if (info.offset.x > 100) {
+        triggerHaptic();
+        setResults(results.slice(1));
+        if (!hasSwiped) setHasSwiped(true);
+      }
+    }}
+    initial={{ scale: 1, y: 0, rotate: 0 }}
+    animate={
+      expandedCard === result.question_text
+        ? { scale: 1.2, y: -40, zIndex: 40 }
+        : {
+            scale: 1 - Math.min(index, 3) * 0.05,
+            y: index * 10,
+            zIndex: results.length - index,
+          }
+    }
+    transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+    className={`absolute w-full bg-gray-900/70 p-8 rounded-3xl border border-gray-700 shadow-2xl cursor-grab active:cursor-grabbing ${
+      expandedCard === result.question_text
+        ? 'z-40 h-full overflow-y-auto'
+        : 'h-auto max-h-full backdrop-blur-sm overflow-hidden'
+    }`}
+    style={{
+      transformOrigin: 'bottom center',
+    }}
+    onClick={() => {
+      if (index === 0) {
+        if (expandedCard === result.question_text) {
+          setExpandedCard(null);
+        } else {
+          setExpandedCard(result.question_text);
+        }
+      }
+    }}
+  >
+    {result.question_type === 'MCQ' ? (
+      <div>
+        <p className="text-gray-200 text-lg leading-relaxed">{result.stem}</p>
+        <div className="mt-4 space-y-2">
+          {Object.entries(result.options).map(([key, value]) => (
+            <div key={key} className="flex items-center">
+              <span className="text-gray-400 mr-2">{key}.</span>
+              <p className="text-gray-300">{value as string}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    ) : (
+      <p className="text-gray-200 text-lg leading-relaxed">{result.question_text}</p>
+    )}
+    <div className="mt-4 flex justify-between items-center text-sm text-gray-400">
+      <span>{result.exam_type} - {result.paper} - {result.question_type}</span>
+      <span>{result.year?.$numberInt || result.year}</span>
+    </div>
+  </motion.div>
+))}
+
               </div>
             )}
             {!isLoading && results.length > 0 && !hasSwiped && (

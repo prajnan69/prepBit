@@ -52,7 +52,7 @@ const AnimatedPrice = ({ from, to }: { from: number, to: number }) => {
   return <motion.span>{price}</motion.span>;
 };
 
-const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
+const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPageProps) => {
   const ionRouter = useIonRouter();
   const { triggerHaptic, triggerErrorHaptic, triggerPriceAnimationHaptic } = useHaptics();
   const [selectedPlan, setSelectedPlan] = useState<string>('prepbit-yearly');
@@ -62,6 +62,7 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
   const [promoCode, setPromoCode] = useState('');
   const [promoStatus, setPromoStatus] = useState<{ isValid: boolean | null; message?: string }>({ isValid: null });
   const [isLoading, setIsLoading] = useState(true);
+  const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
   const [showOriginalPrice, setShowOriginalPrice] = useState(false);
   const [countdown, setCountdown] = useState(180);
@@ -287,8 +288,9 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
           }} className="w-full mt-3 py-1 text-slate-500 hover:text-slate-300 font-medium transition">
             View More Plans
           </button>
-          <div className="text-center mt-4">
+          <div className="text-center mt-4 flex justify-center items-center space-x-4">
             <a href="/refund-policy" className="text-xs text-slate-500 hover:underline">Refund Policy</a>
+            <button onClick={onRestore} className="text-xs text-slate-500 hover:underline">Restore Purchase</button>
           </div>
           
         </div>
@@ -329,7 +331,6 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
                     <div>
                       <p className="font-bold text-white text-lg">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].title : plan.title}</p>
                       <p className="text-sm text-slate-400">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].subtitle : plan.subtitle}</p>
-                      <p className="text-xs text-slate-300 mt-1">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].description : plan.description}</p>
                       <button onClick={(e) => {
                         e.stopPropagation();
                         ionRouter.push('/all-plans');
@@ -365,6 +366,7 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
                   <button
                     onClick={async () => {
                       triggerHaptic();
+                      setIsApplyingPromo(true);
                       const result = await onApplyPromoCode(promoCode);
                       setPromoStatus(result);
                       if (result.isValid) {
@@ -377,10 +379,16 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
                       } else {
                         triggerErrorHaptic();
                       }
+                      setIsApplyingPromo(false);
                     }}
                     className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-500 transition-all"
+                    disabled={isApplyingPromo}
                   >
-                    Apply
+                    {isApplyingPromo ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      'Apply'
+                    )}
                   </button>
                 </div>
                 <AnimatePresence>
@@ -401,10 +409,13 @@ const PaywallPage = ({ onPurchase, onApplyPromoCode }: PaywallPageProps) => {
                       exit={{ opacity: 0, y: -10 }}
                       className="text-red-400"
                     >
-                      {promoStatus.message || 'Invalid promo code.'}
+                      {promoStatus.message === 'Promo code has already been used.' ? 'You have already used this promo code.' : promoStatus.message || 'Invalid promo code.'}
                     </motion.p>
                   )}
                 </AnimatePresence>
+                <div className="text-center mt-4">
+                  <button onClick={() => ionRouter.push('/affiliate-onboarding')} className="text-xs text-slate-500 hover:underline">Apply for Affiliate Partnership</button>
+                </div>
               </div>
             </motion.div>
           </>

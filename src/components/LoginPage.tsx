@@ -16,7 +16,6 @@ const LoginPage = () => {
   const [otpStatus, setOtpStatus] = useState<'default' | 'error' | 'success'>('default');
   const [isVerifying, setIsVerifying] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [isDemoLoading, setIsDemoLoading] = useState(false);
   const ionRouter = useIonRouter();
   const { triggerHaptic, triggerErrorHaptic } = useHaptics();
 
@@ -126,31 +125,6 @@ const LoginPage = () => {
     }
   };
 
-  const handleDemoLogin = async () => {
-    setIsDemoLoading(true);
-    setError(null);
-
-    console.log('Attempting demo login with:', {
-      email: 'testuser@example.com',
-    });
-
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email: 'testuser@example.com',
-      password: 'testuserpassword',
-    });
-
-    if (error) {
-      console.error('Demo login error:', error);
-      setError(error.message);
-      setOtpStatus('error');
-      triggerErrorHaptic();
-    } else {
-      console.log('Demo login successful:', data);
-      ionRouter.push('/', 'root', 'replace');
-    }
-    setIsDemoLoading(false);
-  };
-
   return (
     <IonPage>
       <IonContent>
@@ -214,19 +188,6 @@ const LoginPage = () => {
                     {isSending ? 'Sending...' : 'Send OTP'}
                   </button>
                 </div>
-                {import.meta.env.VITE_DEMO_LOGIN_ENABLED === 'true' && (
-                  <div className="mt-4">
-                    <button
-                      type="button"
-                      onClick={handleDemoLogin}
-                      disabled={isDemoLoading}
-                      className="w-full py-3 rounded-xl text-white font-semibold disabled:opacity-50"
-                      style={{ background: 'linear-gradient(to right, #4CAF50, #81C784)' }}
-                    >
-                      {isDemoLoading ? 'Logging in...' : 'Demo Login'}
-                    </button>
-                  </div>
-                )}
               </motion.form>
             ) : (
               <motion.form
@@ -253,7 +214,7 @@ const LoginPage = () => {
                 />
                 <button
                   type="submit"
-                  disabled={isVerifying}
+                  disabled={isVerifying || otpStatus === 'success'}
                   className="w-full py-3 rounded-xl text-white font-semibold disabled:opacity-50"
                   style={{ background: 'linear-gradient(to right, #8A2BE2, #FFA500)' }}
                 >

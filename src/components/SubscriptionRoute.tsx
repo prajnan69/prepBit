@@ -30,6 +30,10 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
     return <Redirect to="/login" />;
   }
 
+  if (!profile || !profile.full_name || !profile.exam) {
+    return <Redirect to="/onboarding" />;
+  }
+
   const handleApplyPromoCode = async (promoCode: string) => {
     if (!session) {
       return { isValid: false, message: 'User not logged in' };
@@ -80,7 +84,7 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
         return;
       }
 
-      const offeringIdentifier = promoCode && !planId.includes('trial') ? `${baseOfferingId.toLowerCase()}_promo` : baseOfferingId;
+      const offeringIdentifier = promoCode && !planId.includes('trial') ? `${baseOfferingId}_promo` : baseOfferingId;
       const offering = offerings.all[offeringIdentifier];
       if (!offering) {
         console.error('Offering not found:', offeringIdentifier);
@@ -97,7 +101,7 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
           const entitlement = Object.values(customerInfo.entitlements.active)[0];
-          const subscriptionData = {
+          const subscriptionData: any = {
             user_id: user.id,
             product_identifier: entitlement.productIdentifier,
             product_plan_identifier: entitlement.productPlanIdentifier,
@@ -111,7 +115,12 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
             verification: entitlement.verification,
             original_app_user_id: customerInfo.originalAppUserId,
           };
-          const { data: subData, error: subError } = await supabase.from('user_subscriptions').insert([subscriptionData]);
+
+          if (promoCode) {
+            subscriptionData.promocode = promoCode;
+          }
+          
+          const { data: subData, error: subError } = await supabase.from('user_subscriptions').upsert(subscriptionData, { onConflict: 'user_id' });
 
           if (subError) {
             console.error('Error inserting subscription data:', JSON.stringify(subError, null, 2));

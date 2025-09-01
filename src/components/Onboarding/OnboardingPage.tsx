@@ -11,6 +11,7 @@ import LoaderPage from './LoaderPage';
 import GoalPage from './GoalPage';
 import NotificationsPage from './NotificationsPage';
 import TimeSelectionPage from './TimeSelectionPage';
+import { useProfile } from '../../context/ProfileContext';
 
 interface UserData {
   name: string;
@@ -41,6 +42,7 @@ const OnboardingPage = () => {
     updateTime: '09:00',
   });
   const ionRouter = useIonRouter();
+  const { refetchProfile } = useProfile();
 
   useEffect(() => {
     const imageUrls = [
@@ -141,6 +143,7 @@ const OnboardingPage = () => {
       if (error) {
         console.error('Error updating profile:', error);
       } else {
+        refetchProfile();
       }
     }
     handleFinish();

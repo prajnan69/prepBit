@@ -10,7 +10,11 @@ const LiveFeedPage = ({ showToast, activeTab }: { showToast: (message: string) =
 
   useEffect(() => {
     const fetchFeed = async () => {
-      const { data, error } = await supabase.from('live_feed').select('title, created_at, link');
+      const { data, error } = await supabase
+        .from('live_feed')
+        .select('title, created_at, link')
+        .order('created_at', { ascending: false })
+
       if (error) {
         console.error('Error fetching live feed:', error);
       } else if (data) {
@@ -18,7 +22,19 @@ const LiveFeedPage = ({ showToast, activeTab }: { showToast: (message: string) =
       }
       setLoading(false);
     };
+
     fetchFeed();
+
+    const channel = supabase
+      .channel('public:live_feed')
+      .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'live_feed' }, (payload) => {
+        setFeed((prevFeed) => [{ ...payload.new, summary: '' }, ...prevFeed]);
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   return (

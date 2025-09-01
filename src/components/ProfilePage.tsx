@@ -11,7 +11,8 @@ import {
   LogOut,
   HelpCircle,
   Book,
-  Star
+  Star,
+  Users
 } from 'lucide-react';
 import { useColor } from 'color-thief-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -56,6 +57,7 @@ const ProfilePage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
+  const [isAffiliate, setIsAffiliate] = useState(false);
   const sessionRestored = useRef(false);
 
   useEffect(() => {
@@ -98,7 +100,34 @@ const ProfilePage = () => {
   };
 
   restoreSession();
-}, []);
+
+  const checkAffiliateStatus = async () => {
+    if (profile) {
+      const { data, error } = await supabase
+        .from('affiliate_participants')
+        .select('is_approved')
+        .eq('user_id', profile.id)
+        .single();
+
+      if (data && data.is_approved) {
+        setIsAffiliate(true);
+      }
+    }
+  };
+
+  checkAffiliateStatus();
+
+  const channel = supabase
+    .channel('affiliate_participants')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'affiliate_participants' }, () => {
+      checkAffiliateStatus();
+    })
+    .subscribe();
+
+  return () => {
+    supabase.removeChannel(channel);
+  };
+}, [profile]);
 
 
 
@@ -275,6 +304,16 @@ const ProfilePage = () => {
 
               <div className="bg-white/30 backdrop-blur-lg rounded-3xl shadow-lg p-4 mx-4 space-y-1">
                 <Item icon={<User size={20} className="text-blue-500" />} bg="bg-blue-100" label="My Profile" value={profile?.username} onClick={() => ionRouter.push('/profile/details')} />
+                {isAffiliate && (
+                  <Item icon={<Users size={20} className="text-teal-500" />} bg="bg-teal-100" label="Affiliate Dashboard" onClick={async () => {
+                    const sessionResp = await supabase.auth.getSession();
+                    const session = sessionResp.data.session;
+                    if (session) {
+                      const url = `${config.API_BASE_URL}/affiliate-dashboard?token=${encodeURIComponent(session.access_token)}`;
+                      await Browser.open({ url });
+                    }
+                  }} />
+                )}
                 <Item icon={<HelpCircle size={20} className="text-purple-500" />} bg="bg-purple-100" label="Support" onClick={() => ionRouter.push('/profile/support')} />
                 <Item icon={<Package size={20} className="text-green-500" />} bg="bg-green-100" label="Read Later" onClick={() => ionRouter.push('/read-later')} />
                 <Item icon={<Book size={20} className="text-yellow-500" />} bg="bg-yellow-100" label="Bookmarks" onClick={() => ionRouter.push('/bookmarks')} />
