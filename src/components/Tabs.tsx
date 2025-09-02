@@ -50,7 +50,7 @@ const Tabs = ({
   const tabs = [
     { id: 'home', path: '/home', icon: home, label: 'Home' },
     { id: 'search', path: '/search', icon: searchOutline, label: 'Search' },
-    { id: 'backtrack', path: '/backtrack', icon: timerOutline, label: 'Backtrack' },
+    { id: 'backtrack', path: '/backtrack', icon: timerOutline, label: 'PYQ' },
     { id: 'profile', path: '/profile', icon: personOutline, label: 'Profile' },
   ];
 

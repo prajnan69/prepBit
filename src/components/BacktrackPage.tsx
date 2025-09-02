@@ -106,7 +106,7 @@ const BacktrackPage = () => {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="text-center mb-8"
           >
-            <h1 className="text-4xl font-bold tracking-tighter">Backtrack</h1>
+            <h1 className="text-4xl font-bold tracking-tighter">PYQ</h1>
             <p className="text-lg text-gray-400 mt-2">
               Search for topics and discover how questions have been asked before.
             </p>
