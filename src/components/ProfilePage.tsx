@@ -55,51 +55,11 @@ const ProfilePage = () => {
   const { triggerHaptic } = useHaptics();
   const [showHoldIndicator, setShowHoldIndicator] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isOpeningBrowser, setIsOpeningBrowser] = useState(false);
   const [isAffiliate, setIsAffiliate] = useState(false);
-  const sessionRestored = useRef(false);
 
   useEffect(() => {
-  const restoreSession = async () => {
-    if (sessionRestored.current) return;
-    sessionRestored.current = true;
-
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    setIsLoading(true);
-    if (token) {
-      try {
-        const { error } = await supabase.auth.setSession({
-          access_token: token,
-          refresh_token: ''
-        });
-
-        if (!error) {
-          localStorage.setItem('prepbit_token', token);
-          await refetchProfile();
-          window.history.replaceState(null, '', '/profile');
-        }
-      } catch (err) {
-      } finally {
-        setIsLoading(false);
-      }
-    } else {
-      const savedToken = localStorage.getItem('prepbit_token');
-      if (savedToken) {
-        const { error } = await supabase.auth.setSession({
-          access_token: savedToken,
-          refresh_token: ''
-        });
-        if (!error) {
-          await refetchProfile();
-        }
-      }
-      setIsLoading(false);
-    }
-  };
-
-  restoreSession();
 
   const checkAffiliateStatus = async () => {
     if (profile) {
@@ -144,9 +104,15 @@ const ProfilePage = () => {
   }, [color]);
 
   useEffect(() => {
-  supabase.auth.getSession().then(({ data: { session } }) => {
-  });
-}, []);
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        ionRouter.push('/login', 'root', 'replace');
+      }
+    };
+
+    getSession();
+  }, [ionRouter]);
 
   const handleAvatarChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     if (!event.target.files?.length) return;
@@ -308,8 +274,9 @@ const ProfilePage = () => {
                   <Item icon={<Users size={20} className="text-teal-500" />} bg="bg-teal-100" label="Affiliate Dashboard" onClick={async () => {
                     const sessionResp = await supabase.auth.getSession();
                     const session = sessionResp.data.session;
-                    if (session) {
-                      const url = `${config.API_BASE_URL}/affiliate-dashboard?token=${encodeURIComponent(session.access_token)}`;
+                    if (session && session.access_token && session.refresh_token) {
+                      const { access_token, refresh_token } = session;
+                      const url = `/bridge?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
                       await Browser.open({ url });
                     }
                   }} />

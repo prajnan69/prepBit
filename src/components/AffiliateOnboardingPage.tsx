@@ -12,6 +12,7 @@ const AffiliateOnboardingPage = () => {
     const [termsAccepted, setTermsAccepted] = useState(false);
     const [verificationCode, setVerificationCode] = useState('');
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isRedirecting, setIsRedirecting] = useState(false);
 
     useEffect(() => {
         const checkAffiliateStatusAndFetchUser = async () => {
@@ -25,8 +26,13 @@ const AffiliateOnboardingPage = () => {
                     .single();
 
                 if (data && data.is_approved) {
-                    ionRouter.push('/affiliate-dashboard', 'root', 'replace');
+                    setIsRedirecting(true);
+                    setTimeout(() => {
+                        ionRouter.push('/affiliate-dashboard', 'root', 'replace');
+                    }, 2000);
                 }
+            } else {
+                ionRouter.push('/login', 'root', 'replace');
             }
         };
 
@@ -64,9 +70,16 @@ const AffiliateOnboardingPage = () => {
     return (
         <IonPage>
             <IonContent>
-                <div className="bg-gray-900 text-white min-h-screen flex flex-col justify-center items-center p-4">
-                    <div className="w-full max-w-4xl">
-                        <div className="text-center md:text-left mb-8">
+                {isRedirecting ? (
+                    <div className="bg-gray-900 text-white min-h-screen flex flex-col justify-center items-center p-4">
+                        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-white mb-4"></div>
+                        <h1 className="text-2xl font-bold">Welcome to the Affiliate Dashboard</h1>
+                        <p className="text-gray-400">Redirecting...</p>
+                    </div>
+                ) : (
+                    <div className="bg-gray-900 text-white min-h-screen flex flex-col justify-center items-center p-4">
+                        <div className="w-full max-w-4xl">
+                            <div className="text-center md:text-left mb-8">
                             <h1 className="text-4xl md:text-5xl font-bold">Join the PrepBit Affiliate Program</h1>
                         </div>
                         <div className="bg-black bg-opacity-20 backdrop-blur-lg rounded-2xl p-8 shadow-lg">
@@ -112,7 +125,8 @@ const AffiliateOnboardingPage = () => {
                             )}
                         </div>
                     </div>
-                </div>
+                    </div>
+                )}
             </IonContent>
         </IonPage>
     );

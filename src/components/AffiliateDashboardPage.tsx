@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabaseClient';
-import { useAuth } from '../hooks/useAuth';
-import { IonPage, IonContent, useIonRouter } from '@ionic/react';
+import { IonPage, IonContent, useIonRouter, useIonViewWillEnter } from '@ionic/react';
 import { HelpCircle } from 'lucide-react';
 
 interface AffiliateData {
@@ -14,7 +13,6 @@ interface AffiliateData {
 }
 
 const AffiliateDashboardPage = () => {
-    const { session } = useAuth();
     const [affiliateData, setAffiliateData] = useState<AffiliateData | null>(null);
     const [loading, setLoading] = useState(true);
     const [termsAccepted, setTermsAccepted] = useState(false);
@@ -36,18 +34,58 @@ const AffiliateDashboardPage = () => {
     const [showSuccessMessage, setShowSuccessMessage] = useState(false);
     const ionRouter = useIonRouter();
 
-    useEffect(() => {
-        const urlParams = new URLSearchParams(window.location.hash.substring(1));
-        const token = urlParams.get('access_token');
+    
+    const fetchAffiliateData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            setLoading(true);
+            const { data, error } = await supabase.rpc('get_affiliate_earnings', { p_user_id: session.user.id });
 
-        if (token) {
-            supabase.auth.setSession({ access_token: token, refresh_token: '' }).then(({ data: { session } }) => {
-                if (session) {
-                    // refetch data
+            if (error) {
+                console.error('Error fetching affiliate earnings:', error);
+            } else if (data && data.length > 0) {
+                const { total_earnings, trial_count, monthly_subs_count, yearly_subs_count } = data[0];
+                const { data: affiliateData, error: affiliateError } = await supabase
+                    .from('affiliate_participants')
+                    .select('promo_code')
+                    .eq('user_id', session.user.id)
+                    .single();
+                
+                if (affiliateData) {
+                    const { data: affiliateParticipant, error: affiliateParticipantError } = await supabase
+                        .from('affiliate_participants')
+                        .select('id, promo_code')
+                        .eq('user_id', session.user.id)
+                        .single();
+
+                    if (affiliateParticipant) {
+                        setAffiliateData({
+                            id: affiliateParticipant.id,
+                            promo_code: affiliateParticipant.promo_code,
+                            earnings: total_earnings,
+                            trial_count: trial_count,
+                            monthly_subs: monthly_subs_count,
+                            yearly_subs: yearly_subs_count,
+                        });
+                    }
                 }
-            });
+            }
+            setLoading(false);
         }
-    }, []);
+    };
+
+    useIonViewWillEnter(() => {
+        const getSession = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session) {
+                ionRouter.push('/login', 'root', 'replace');
+            } else {
+                fetchAffiliateData();
+            }
+        };
+
+        getSession();
+    });
 
     const handleRedeemReel = async () => {
         setShowVerification(false);
@@ -81,20 +119,7 @@ const AffiliateDashboardPage = () => {
                 console.error('Error redeeming reel:', error);
                 alert('There was an error redeeming your reel. Please try again.');
             } else {
-                // Refetch affiliate data to update earnings
-                if (session) {
-                    const { data, error } = await supabase.rpc('get_affiliate_earnings', { p_user_id: session.user.id });
-                    if (data && data.length > 0) {
-                        const { total_earnings, trial_count, monthly_subs_count, yearly_subs_count } = data[0];
-                        setAffiliateData({
-                        ...affiliateData,
-                        earnings: total_earnings,
-                        trial_count: trial_count,
-                        monthly_subs: monthly_subs_count,
-                        yearly_subs: yearly_subs_count,
-                    });
-                    }
-                }
+                fetchAffiliateData();
             }
         }
         setTimeout(() => {
@@ -125,47 +150,8 @@ const AffiliateDashboardPage = () => {
     };
 
     useEffect(() => {
-        const fetchAffiliateData = async () => {
-            if (session) {
-                setLoading(true);
-                const { data, error } = await supabase.rpc('get_affiliate_earnings', { p_user_id: session.user.id });
-
-                if (error) {
-                    console.error('Error fetching affiliate earnings:', error);
-                } else if (data && data.length > 0) {
-                    const { total_earnings, trial_count, monthly_subs_count, yearly_subs_count } = data[0];
-                    const { data: affiliateData, error: affiliateError } = await supabase
-                        .from('affiliate_participants')
-                        .select('promo_code')
-                        .eq('user_id', session.user.id)
-                        .single();
-                    
-                    if (affiliateData) {
-                        const { data: affiliateParticipant, error: affiliateParticipantError } = await supabase
-                            .from('affiliate_participants')
-                            .select('id, promo_code')
-                            .eq('user_id', session.user.id)
-                            .single();
-
-                        if (affiliateParticipant) {
-                            setAffiliateData({
-                                id: affiliateParticipant.id,
-                                promo_code: affiliateParticipant.promo_code,
-                                earnings: total_earnings,
-                                trial_count: trial_count,
-                                monthly_subs: monthly_subs_count,
-                                yearly_subs: yearly_subs_count,
-                            });
-                        }
-                    }
-                }
-                setLoading(false);
-            }
-        };
-
-        fetchAffiliateData();
-
         const fetchTips = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             if (session) {
                 const { data, error } = await supabase
                     .from('affiliate_tips')
@@ -179,10 +165,11 @@ const AffiliateDashboardPage = () => {
         };
 
         fetchTips();
-    }, [session]);
+    }, []);
 
     useEffect(() => {
         const fetchPayoutHistory = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             if (session && affiliateData?.id) {
                 const { data, error } = await supabase
                     .from('affiliate_payouts')
@@ -196,6 +183,7 @@ const AffiliateDashboardPage = () => {
         fetchPayoutHistory();
 
         const fetchRedeemedReels = async () => {
+            const { data: { session } } = await supabase.auth.getSession();
             if (session && affiliateData?.id) {
                 const { data, error } = await supabase
                     .from('redeemed_reels')
@@ -211,7 +199,7 @@ const AffiliateDashboardPage = () => {
             }
         };
         fetchRedeemedReels();
-    }, [session, affiliateData]);
+    }, [affiliateData]);
 
     useEffect(() => {
         const interval = setInterval(() => {
@@ -484,7 +472,7 @@ const AffiliateDashboardPage = () => {
                                             disabled={payoutStatus === 'loading'}
                                         >
                                             {payoutStatus === 'loading' ? (
-                                                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                                                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white"></div>
                                             ) : (
                                                 'Request Payout'
                                             )}
