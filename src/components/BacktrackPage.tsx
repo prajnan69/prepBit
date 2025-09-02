@@ -168,10 +168,10 @@ const BacktrackPage = () => {
           }
     }
     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-    className={`absolute w-full bg-gray-900/70 p-8 rounded-3xl border border-gray-700 shadow-2xl cursor-grab active:cursor-grabbing ${
+    className={`absolute w-full p-8 rounded-3xl border border-gray-700 shadow-2xl cursor-grab active:cursor-grabbing ${
       expandedCard === result.question_text
-        ? 'z-40 h-full overflow-y-auto'
-        : 'h-auto max-h-full backdrop-blur-sm overflow-hidden'
+        ? 'z-40 h-full overflow-y-auto bg-gray-900'
+        : 'bg-gray-900 h-auto max-h-full  overflow-hidden'
     }`}
     style={{
       transformOrigin: 'bottom center',

@@ -58,16 +58,14 @@ const BookmarksPage = ({ showToast }: { showToast: (message: string) => void }) 
         <IonRefresher slot="fixed" onIonRefresh={fetchBookmarkedArticles}>
           <IonRefresherContent></IonRefresherContent>
         </IonRefresher>
-        {width <= 380 && (
-          <div className="flex justify-end p-4">
-            <button onClick={() => {
-              triggerHaptic();
-              ionRouter.goBack();
-            }}>
-              <X size={24} />
-            </button>
-          </div>
-        )}
+        <div className="flex justify-end p-4">
+          <button onClick={() => {
+            triggerHaptic();
+            ionRouter.goBack();
+          }}>
+            <X size={24} />
+          </button>
+        </div>
         <div className="p-4">
           <h1 className="text-3xl font-bold mb-4">Bookmarks</h1>
           {loading ? (

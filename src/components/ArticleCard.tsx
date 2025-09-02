@@ -88,7 +88,7 @@ const ArticleCard = ({ article, showToast, isReadLaterPage = false, onDismiss }:
       >
         <div className="flex items-center space-x-2 text-white">
           <Clock size={18} />
-          <span>Read Later</span>
+          <span>Revise</span>
         </div>
       </motion.div>
       <motion.div

@@ -20,7 +20,7 @@ import { useHaptics } from '../hooks/useHaptics';
 import MainScreen from './MainScreen';
 import ProfilePage from './ProfilePage';
 import BookmarksPage from './BookmarksPage';
-import ReadLaterPage from './ReadLaterPage';
+import RevisePage from './RevisePage';
 import SearchPage from './SearchPage';
 import BacktrackPage from './BacktrackPage';
 import ArticlePage from './ArticlePage';
@@ -84,7 +84,7 @@ const Tabs = ({
         <Route path="/search" render={() => <SearchPage />} exact />
         <Route path="/backtrack" render={() => <BacktrackPage />} exact />
         <Route path="/bookmarks" render={() => <BookmarksPage showToast={showToast} />} exact />
-        <Route path="/read-later" render={() => <ReadLaterPage showToast={showToast} />} exact />
+        <Route path="/read-later" render={() => <RevisePage showToast={showToast} />} exact />
         <Route path="/profile" render={() => <ProfilePage />} exact />
         <Route path="/profile/details" render={() => <MyProfileDetailsPage />} exact />
         <Route path="/profile/support" render={() => <SupportPage setSupportDrawer={setSupportDrawer} />} exact />

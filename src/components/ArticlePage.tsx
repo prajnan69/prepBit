@@ -19,6 +19,7 @@ import axios from 'axios';
 import config from '../config';
 import TestDrawer from './TestDrawer';
 import ValueAddDrawer from './ValueAddDrawer';
+import QuestionsDrawer from './QuestionsDrawer';
 import Keyword from './Keyword';
 import { IonButton } from '@ionic/react';
 
@@ -32,11 +33,12 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
   const [examType, setExamType] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('summary');
   const [prelimsData, setPrelimsData] = useState<{ markdown: string; mcqs: any[] } | null>(null);
-  const [mainsData, setMainsData] = useState<{ markdown: string; points: any[]; keywords: string[] } | null>(null);
+  const [mainsData, setMainsData] = useState<{ markdown: string; points: any[]; keywords: string[]; questions: string[] } | null>(null);
   const [loadingPrelims, setLoadingPrelims] = useState(false);
   const [loadingMains, setLoadingMains] = useState(false);
   const [isTestDrawerOpen, setIsTestDrawerOpen] = useState(false);
-  const [isMainsTestDrawerOpen, setIsMainsTestDrawerOpen] = useState(false);
+  const [isValueAddDrawerOpen, setIsValueAddDrawerOpen] = useState(false);
+  const [isQuestionsDrawerOpen, setIsQuestionsDrawerOpen] = useState(false);
   const [showTestText, setShowTestText] = useState(false);
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
@@ -462,7 +464,7 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
                     if (activeTab === 'prelims') {
                       setIsTestDrawerOpen(true);
                     } else if (activeTab === 'mains') {
-                      setIsMainsTestDrawerOpen(true);
+                      setIsValueAddDrawerOpen(true);
                     }
                     await triggerHaptic();
                   }}
@@ -473,6 +475,18 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
                     {activeTab === 'prelims' ? 'Test Your Knowledge' : 'Value Added Points'}
                   </span>
                 </button>
+                {activeTab === 'mains' && (
+                  <button
+                    onClick={async () => {
+                      setIsQuestionsDrawerOpen(true);
+                      await triggerHaptic();
+                    }}
+                    className="bg-purple-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 mt-4"
+                  >
+                    <FileText size={18} />
+                    <span>Questions</span>
+                  </button>
+                )}
               </motion.div>
             )}
           </AnimatePresence>
@@ -484,9 +498,14 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
             mcqs={prelimsData?.mcqs || []}
           />
           <ValueAddDrawer
-            isOpen={isMainsTestDrawerOpen}
-            onClose={() => setIsMainsTestDrawerOpen(false)}
+            isOpen={isValueAddDrawerOpen}
+            onClose={() => setIsValueAddDrawerOpen(false)}
             points={mainsData?.points || []}
+          />
+          <QuestionsDrawer
+            isOpen={isQuestionsDrawerOpen}
+            onClose={() => setIsQuestionsDrawerOpen(false)}
+            questions={mainsData?.questions || []}
           />
         </div>
       </IonContent>

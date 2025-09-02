@@ -37,6 +37,7 @@ import AllPlansPage from './components/AllPlansPage';
 import AffiliateOnboardingPage from './components/AffiliateOnboardingPage';
 import AffiliateDashboardPage from './components/AffiliateDashboardPage';
 import BridgePage from './components/BridgePage';
+import RevisePage from './components/RevisePage';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -187,6 +188,7 @@ const App = () => {
                 <Route exact path="/bridge/profile" component={BridgeProfilePage} />
                 <Route path="/bridge" component={BridgePage} exact />
                 <Route path="/external-profile" component={ProfilePage} exact />
+                <Route path="/revise" render={() => <RevisePage showToast={showToastWithMessage} />} exact />
                 
                 {/* --- Private Routes --- */}
                 <PrivateRoute>

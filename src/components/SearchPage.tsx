@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { IonPage, IonContent } from '@ionic/react';
 import { motion, AnimatePresence } from "framer-motion";
 import { useSearch } from "../context/SearchContext";
-import { FiSearch, FiClock, FiArrowRight, FiLoader } from "react-icons/fi";
+import { FiSearch, FiClock, FiArrowRight, FiLoader, FiBookmark, FiCheck } from "react-icons/fi";
 import { supabase } from "../lib/supabaseClient";
 import HistorySidebar from "./HistorySidebar";
 import { Keyboard } from '@capacitor/keyboard';
@@ -50,6 +50,7 @@ const SearchPage = () => {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [examType, setExamType] = useState("");
   const { triggerHaptic } = useHaptics();
+  const [isRevised, setIsRevised] = useState(false);
 
   useEffect(() => {
     if (isFocused || topicDetails || loading) return;
@@ -288,6 +289,37 @@ const SearchPage = () => {
             </div>
           </motion.div>
         </form>
+
+        {topicDetails && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="w-full max-w-md mt-4"
+          >
+            <motion.button
+              onClick={async () => {
+                if (isRevised) return;
+                const { data: { user } } = await supabase.auth.getUser();
+                if (user) {
+                  await supabase.from('revise').insert({
+                    user_id: user.id,
+                    content: { question: searchQuery, answer: topicDetails },
+                    type: 'search',
+                  });
+                  setIsRevised(true);
+                }
+              }}
+              className="flex items-center space-x-2 text-blue-500"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            >
+              {isRevised ? <FiCheck /> : <FiBookmark />}
+              <span>{isRevised ? 'Added' : 'Add to Revise'}</span>
+            </motion.button>
+          </motion.div>
+        )}
 
         <AnimatePresence>
           {loading && (

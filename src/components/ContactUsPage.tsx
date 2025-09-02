@@ -5,8 +5,11 @@ import { FiSend, FiCheckCircle } from 'react-icons/fi';
 import { supabase } from '../lib/supabaseClient';
 import config from '../config';
 import { useDeviceType } from '../hooks/useDeviceType';
+import { useIonRouter } from '@ionic/react';
+import { X } from 'lucide-react';
 
 const ContactUsPage = () => {
+  const ionRouter = useIonRouter();
   const { triggerHaptic } = useHaptics();
   const platform = useDeviceType();
   const [formData, setFormData] = useState({
@@ -50,7 +53,10 @@ const ContactUsPage = () => {
 
   return (
     <div className="bg-gradient-to-br from-indigo-50 via-white to-cyan-50 min-h-screen flex items-center justify-center p-4">
-      <div className="max-w-md w-full">
+      <div className="max-w-md w-full relative">
+        <button onClick={() => ionRouter.goBack()} className="absolute top-4 right-4 text-gray-600">
+          <X size={24} />
+        </button>
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}

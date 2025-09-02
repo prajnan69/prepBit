@@ -284,7 +284,7 @@ const ProfilePage = () => {
                   }} />
                 )}
                 <Item icon={<HelpCircle size={20} className="text-purple-500" />} bg="bg-purple-100" label="Support" onClick={() => ionRouter.push('/profile/support')} />
-                <Item icon={<Package size={20} className="text-green-500" />} bg="bg-green-100" label="Read Later" onClick={() => ionRouter.push('/read-later')} />
+                <Item icon={<Package size={20} className="text-green-500" />} bg="bg-green-100" label="Revise" onClick={() => ionRouter.push('/revise')} />
                 <Item icon={<Book size={20} className="text-yellow-500" />} bg="bg-yellow-100" label="Bookmarks" onClick={() => ionRouter.push('/bookmarks')} />
                 <Item icon={<HelpCircle size={20} className="text-purple-500" />} bg="bg-purple-100" label="Contact Us" onClick={() => ionRouter.push('/contact-us')} />
                 <div className="pt-2">
