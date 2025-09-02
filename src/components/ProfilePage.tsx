@@ -272,11 +272,13 @@ const ProfilePage = () => {
                 <Item icon={<User size={20} className="text-blue-500" />} bg="bg-blue-100" label="My Profile" value={profile?.username} onClick={() => ionRouter.push('/profile/details')} />
                 {isAffiliate && (
                   <Item icon={<Users size={20} className="text-teal-500" />} bg="bg-teal-100" label="Affiliate Dashboard" onClick={async () => {
+                    console.log('Affiliate Dashboard button clicked');
                     const sessionResp = await supabase.auth.getSession();
                     const session = sessionResp.data.session;
                     if (session && session.access_token && session.refresh_token) {
                       const { access_token, refresh_token } = session;
-                      const url = `/bridge?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
+                      const url = `https://prepbit.academy/bridge?token=${encodeURIComponent(access_token)}&refresh=${encodeURIComponent(refresh_token)}`;
+                      console.log(`Opening URL: ${url}`);
                       await Browser.open({ url });
                     }
                   }} />

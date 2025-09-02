@@ -7,6 +7,7 @@ import PaywallPage from './Onboarding/PaywallPage';
 import { useRevenueCat } from '../hooks/useRevenueCat';
 import { Purchases } from '@revenuecat/purchases-capacitor';
 import config from '../config';
+import { Capacitor } from '@capacitor/core';
 
 const SubscriptionRoute = ({ component: Component, requireActiveSubscription = true, showToast, ...rest }: any) => {
   const { session, loading: authLoading } = useAuth();

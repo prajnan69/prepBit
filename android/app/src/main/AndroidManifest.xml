@@ -30,6 +30,10 @@
                 <data android:scheme="prepbit" />
             </intent-filter>
 
+            <intent-filter>
+                <action android:name="android.support.customtabs.action.CustomTabsService" />
+            </intent-filter>
+
         </activity>
 
         <provider

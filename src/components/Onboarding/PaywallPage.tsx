@@ -4,6 +4,8 @@ import { motion, AnimatePresence, type Variants, useMotionValue, useTransform, a
 import config from '../../config';
 import { Hourglass } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics';
+import { Capacitor } from '@capacitor/core';
+import UpiPaymentPage from './UpiPaymentPage';
 const useIsMobile = () => typeof window !== 'undefined' ? window.innerWidth < 768 : false;
 
 
@@ -68,6 +70,9 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
   const [countdown, setCountdown] = useState(180);
   const [showTimer, setShowTimer] = useState(false);
   const isMobile = useIsMobile();
+  const isNative = Capacitor.isNativePlatform();
+  const [showUpiModal, setShowUpiModal] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState<'idle' | 'verifying'>('idle');
 
   useEffect(() => {
     const fetchPlans = async () => {
@@ -129,6 +134,25 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
     fetchPlans();
   }, []);
 
+  const renderPrice = (planId: string, size: '3xl' | 'xl') => {
+    const originalPriceStr = plans[planId]?.price.slice(1);
+    const promoPriceStr = promoPlans[planId]?.price.slice(1);
+    const originalPrice = parseFloat(originalPriceStr || '0');
+    const promoPrice = parseFloat(promoPriceStr || '0');
+
+    const shouldAnimate = isAnimating && promoStatus.isValid && promoPlans[planId];
+
+    return (
+      <div className={`font-bold text-${size} text-white`}>
+        {shouldAnimate ? (
+          <AnimatedPrice from={originalPrice} to={promoPrice} />
+        ) : (
+          <span>{(promoStatus.isValid && promoPlans[planId]) ? promoPlans[planId].price : plans[planId]?.price}</span>
+        )}
+      </div>
+    );
+  };
+
   const sortedPlans = Object.values(plans).sort((a, b) => {
     if (a.id === 'prepbit-yearly') return -1;
     if (b.id === 'prepbit-yearly') return 1;
@@ -136,6 +160,186 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
     if (b.id === 'prepbit-monthly') return 1;
     return 0;
   });
+
+  if (!isNative) {
+    if (showUpiModal) {
+      const plan = promoStatus.isValid && promoPlans[selectedPlan] ? promoPlans[selectedPlan] : plans[selectedPlan];
+      const price = plan?.subtitle.split('₹')[1].split(' ')[0];
+
+      return (
+        <div className="flex flex-col h-screen bg-slate-900 text-white font-sans">
+          <div className="flex-grow overflow-y-auto">
+            <div className="flex flex-col justify-center items-center min-h-full w-full max-w-md md:max-w-4xl mx-auto px-6 pt-6 pb-36">
+              <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center bg-slate-800 p-8 rounded-2xl shadow-lg w-full">
+                <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Make Payment</h1>
+                <p className="text-slate-300 mt-2 text-base md:text-lg">
+                  Please make a payment of <span className="font-bold text-green-400">₹{price}</span> to the following UPI ID:
+                </p>
+                <div className="mt-6 bg-slate-700 p-4 rounded-lg flex items-center justify-center gap-4">
+                  <img src="https://uxwing.com/wp-content/themes/uxwing/download/brands-and-social-media/upi-payment-icon.png" alt="UPI" className="w-12 h-12" />
+                  <p className="text-2xl font-bold text-green-400">prepbit@ptaxis</p>
+                </div>
+                <button onClick={() => {
+                  setShowUpiModal(false);
+                  setPaymentStatus('verifying');
+                }} className="w-full mt-8 py-3 bg-indigo-600 text-white text-lg font-bold rounded-xl shadow-lg shadow-indigo-500/50 hover:bg-indigo-500 transition-all animate-pulse">
+                  I have paid
+                </button>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (paymentStatus === 'verifying') {
+      return <UpiPaymentPage />;
+    }
+
+    return (
+      <div className="flex flex-col h-screen bg-slate-900 text-white font-sans">
+        <div className="flex-grow overflow-y-auto">
+          <div className="flex flex-col justify-start min-h-full w-full max-w-md md:max-w-4xl mx-auto px-6 pt-6 pb-36">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Unlock Your Potential</h1>
+              <p className="text-slate-300 mt-1 text-base md:text-lg">Join thousands of successful students</p>
+            </motion.div>
+            <div className="mt-8 text-center">
+              <p className="text-slate-300">We are currently working on our iOS application. In the meantime, we are only able to offer our yearly subscription through the browser. We apologize for any inconvenience.</p>
+            </div>
+            {plans['prepbit-yearly'] && (
+              <motion.div
+                onClick={() => handleSelectPlan('prepbit-yearly')}
+                initial={{ scale: 0.95, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1, transition: { delay: 0.3 } }}
+                className={`relative p-5 mt-8 md:mt-4 rounded-2xl cursor-pointer transition-all border-2 bg-slate-800 
+                  ${selectedPlan === 'prepbit-yearly' ? 'border-indigo-500' : 'border-slate-700'}`}
+              >
+                <div className="absolute -top-4 left-6 bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
+                  Best Value
+                </div>
+                <div className="flex justify-between items-center">
+                  <div className="text-left">
+                    <p className="font-bold text-green-400">{plans['prepbit-yearly'].save}</p>
+                    <h2 className="text-2xl font-bold mt-1">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].title : plans[selectedPlan]?.title}</h2>
+                    <p className="text-slate-400 text-sm">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].subtitle : plans[selectedPlan]?.subtitle}</p>
+                    <p className="text-green-400 text-xs font-medium mt-1">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].extra : plans[selectedPlan]?.extra}</p>
+                  </div>
+                  <div className="text-right">
+                    <div className="flex items-baseline gap-1">
+                      {renderPrice('prepbit-yearly', '3xl')}
+                      <p className="text-sm text-slate-400">{plans['prepbit-yearly'].period}</p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+            <div className="flex items-center gap-2 pt-4">
+              <input
+                type="text"
+                value={promoCode}
+                onChange={(e) => {
+                  const value = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+                  setPromoCode(value);
+                }}
+                placeholder="Enter promo code"
+                className="flex-grow p-2 rounded-lg bg-slate-700 text-white border-2 border-slate-600 focus:border-indigo-500 focus:outline-none"
+              />
+              <button
+                onClick={async () => {
+                  triggerHaptic();
+                  setIsApplyingPromo(true);
+                  const result = await onApplyPromoCode(promoCode);
+                  setPromoStatus(result);
+                  if (result.isValid) {
+                    setShowOriginalPrice(true);
+                    setIsAnimating(true);
+                    triggerPriceAnimationHaptic(2000);
+                    setShowTimer(true);
+                    setCountdown(result.timeLeft || 180);
+                    setTimeout(() => setIsAnimating(false), 2000);
+                  } else {
+                    triggerErrorHaptic();
+                  }
+                  setIsApplyingPromo(false);
+                }}
+                className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-500 transition-all"
+                disabled={isApplyingPromo}
+              >
+                {isApplyingPromo ? (
+                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                ) : (
+                  'Apply'
+                )}
+              </button>
+            </div>
+            <AnimatePresence>
+              {promoStatus.isValid === true && (
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-green-400"
+                >
+                  Promo code applied!
+r                </motion.p>
+              )}
+              {promoStatus.isValid === false && (
+                <motion.p
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="text-red-400"
+                >
+                  {promoStatus.message === 'Promo code has already been used.' ? 'You have already used this promo code.' : promoStatus.message || 'Invalid promo code.'}
+                </motion.p>
+              )}
+            </AnimatePresence>
+            <div className="text-center mt-4">
+              <button onClick={() => ionRouter.push('/affiliate-onboarding')} className="text-xs text-slate-500 hover:underline">Apply for Affiliate Partnership</button>
+            </div>
+          </div>
+        </div>
+        <div className="flex-shrink-0 fixed bottom-0 left-0 right-0 p-4 bg-slate-900/80 backdrop-blur-lg border-t border-slate-700/50">
+          <div className="w-full max-w-md md:max-w-xl mx-auto">
+            <button onClick={() => {
+              triggerHaptic();
+              setShowUpiModal(true);
+            }} className="w-full py-3 bg-indigo-600 text-white text-lg font-bold rounded-xl shadow-lg shadow-indigo-500/50 hover:bg-indigo-500 transition-all animate-pulse">
+              Continue with {(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].title : plans[selectedPlan]?.title}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (showUpiModal) {
+    return (
+      <div className="flex flex-col h-screen bg-slate-900 text-white font-sans">
+        <div className="flex-grow overflow-y-auto">
+          <div className="flex flex-col justify-center items-center min-h-full w-full max-w-md md:max-w-4xl mx-auto px-6 pt-6 pb-36">
+            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Make Payment</h1>
+              <p className="text-slate-300 mt-1 text-base md:text-lg">
+                Please make the payment to the following UPI ID:
+              </p>
+              <p className="text-2xl font-bold mt-4 text-green-400">prepbit@ptaxis</p>
+              <button onClick={() => {
+                setPaymentStatus('verifying');
+              }} className="w-full mt-8 py-3 bg-indigo-600 text-white text-lg font-bold rounded-xl shadow-lg shadow-indigo-500/50 hover:bg-indigo-500 transition-all animate-pulse">
+                Done
+              </button>
+            </motion.div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (paymentStatus === 'verifying') {
+    return <UpiPaymentPage />;
+  }
 
   const handleSelectPlan = (planId: string) => {
     triggerHaptic();
@@ -180,25 +384,6 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
       </div>
     );
   }
-
-  const renderPrice = (planId: string, size: '3xl' | 'xl') => {
-    const originalPriceStr = plans[planId]?.price.slice(1);
-    const promoPriceStr = promoPlans[planId]?.price.slice(1);
-    const originalPrice = parseFloat(originalPriceStr || '0');
-    const promoPrice = parseFloat(promoPriceStr || '0');
-
-    const shouldAnimate = isAnimating && promoStatus.isValid && promoPlans[planId];
-
-    return (
-      <div className={`font-bold text-${size} text-white`}>
-        {shouldAnimate ? (
-          <AnimatedPrice from={originalPrice} to={promoPrice} />
-        ) : (
-          <span>{(promoStatus.isValid && promoPlans[planId]) ? promoPlans[planId].price : plans[planId]?.price}</span>
-        )}
-      </div>
-    );
-  };
 
   return (
     <div className="flex flex-col h-screen bg-slate-900 text-white font-sans">
