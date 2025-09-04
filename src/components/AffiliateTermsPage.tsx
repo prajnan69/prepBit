@@ -26,7 +26,17 @@ const AffiliateTermsPage = () => {
                             </div>
 
                             <div>
-                                <h2 className="text-2xl font-bold text-white mb-2">3. Program Termination</h2>
+                                <h2 className="text-2xl font-bold text-white mb-2">3. Content Rights and Usage</h2>
+                                <p>By participating in the PrepBit Affiliate Program, you grant PrepBit unrestricted rights to use, reproduce, and distribute any content created in collaboration with our brand. This includes, but is not limited to, resharing on social media, inclusion in marketing materials, and any other promotional activities. PrepBit retains full ownership and creative control over all collaborative content.</p>
+                            </div>
+
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-2">4. Payout Conditions and Disputes</h2>
+                                <p>PrepBit reserves the right to deny or withhold payouts in cases where discrepancies are found, or if the payout is determined to be infeasible. This includes, but is not limited to, instances of fraudulent activity, misrepresentation of performance metrics, or violation of program terms. All decisions made by PrepBit regarding payouts are final.</p>
+                            </div>
+
+                            <div>
+                                <h2 className="text-2xl font-bold text-white mb-2">5. Program Termination</h2>
                                 <p>PrepBit reserves the right to terminate your affiliate account at any time, for any reason, including but not limited to violations of these terms or misrepresentation of the PrepBit brand. We will make a reasonable effort to provide notice of termination.</p>
                             </div>
                         </div>

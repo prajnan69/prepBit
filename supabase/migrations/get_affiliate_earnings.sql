@@ -13,7 +13,13 @@ DECLARE
   v_promo_code_id BIGINT;
   v_completed_payouts NUMERIC;
   v_reel_earnings NUMERIC;
+  v_initial_bonus NUMERIC;
 BEGIN
+  -- Get the initial bonus for the given user
+  SELECT COALESCE(initial_bonus, 0) INTO v_initial_bonus
+  FROM public.affiliate_participants
+  WHERE user_id = p_user_id;
+
   -- Get the promo_code_id for the given user
   SELECT pc.id INTO v_promo_code_id
   FROM public.promo_codes pc
@@ -44,7 +50,7 @@ BEGIN
         WHEN us.product_plan_identifier LIKE '%prepbit-yearly-promo-base%' THEN 2500 * 0.1
         ELSE 0
       END
-    ), 0) + v_reel_earnings - v_completed_payouts)::NUMERIC AS total_earnings,
+    ), 0) + v_reel_earnings + v_initial_bonus - v_completed_payouts)::NUMERIC AS total_earnings,
     COALESCE(SUM(CASE WHEN us.product_plan_identifier LIKE '%trial%' THEN 1 ELSE 0 END), 0)::BIGINT AS trial_count,
     COALESCE(SUM(CASE WHEN us.product_plan_identifier LIKE '%prepbit-monthly-promo-base%' THEN 1 ELSE 0 END), 0)::BIGINT AS monthly_subs_count,
     COALESCE(SUM(CASE WHEN us.product_plan_identifier LIKE '%prepbit-yearly-promo-base%' THEN 1 ELSE 0 END), 0)::BIGINT AS yearly_subs_count
