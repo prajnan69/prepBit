@@ -248,7 +248,7 @@ const ProfilePage = () => {
               </div>
             </div>
 
-            <motion.div className="flex-grow px-2 pb-8" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
+            <motion.div className="flex-grow px-2 pb-28" initial={{ y: 100, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, type: 'spring', stiffness: 100 }}>
               {/* <div className={`bg-white/30 ${!Capacitor.isNativePlatform() && 'backdrop-hue-rotate-180'} backdrop-blur-lg rounded-3xl shadow-xl p-4 mx-4 mb-4 transition-all duration-500`}>
                 {Capacitor.isNativePlatform() ? (
                   <Item

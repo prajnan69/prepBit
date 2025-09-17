@@ -414,7 +414,7 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
           </div>
 
           {/* Main Body */}
-          <div className="relative z-10 pt-80 pb-20">
+          <div className="relative z-10 pt-80 pb-48">
             <div className="bg-white rounded-t-3xl px-6 py-2 min-h-[calc(100vh-20rem)]">
               <AnimatePresence mode="wait">
                 <motion.div
@@ -468,7 +468,7 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
                     }
                     await triggerHaptic();
                   }}
-                  className="bg-blue-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
+                  className="bg-white/30 backdrop-blur-lg text-gray-800 border border-white/20 px-6 py-3 rounded-full shadow-lg flex items-center gap-2"
                 >
                   <Lightbulb size={18} />
                   <span>
@@ -481,7 +481,7 @@ const ArticlePage = ({ showToast }: { showToast: (message: string) => void }) =>
                       setIsQuestionsDrawerOpen(true);
                       await triggerHaptic();
                     }}
-                    className="bg-purple-600 text-white px-6 py-3 rounded-full shadow-lg flex items-center gap-2 mt-4"
+                    className="bg-white/30 backdrop-blur-lg text-gray-800 border border-white/20 px-6 py-3 rounded-full shadow-lg flex items-center gap-2 mt-4"
                   >
                     <FileText size={18} />
                     <span>Questions</span>

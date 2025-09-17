@@ -4,6 +4,7 @@ import { Image, Clock } from 'lucide-react';
 import { supabase } from '../lib/supabaseClient';
 import { useIonRouter } from '@ionic/react';
 import { useHaptics } from '../hooks/useHaptics';
+import WarningModal from './WarningModal';
 
 interface LiveArticleCardProps {
   article: any;
@@ -14,6 +15,7 @@ import { useAuth } from '../hooks/useAuth';
 
 const LiveArticleCard = ({ article }: LiveArticleCardProps) => {
   const { triggerHaptic } = useHaptics();
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { session } = useAuth();
   const user = session?.user;
 
@@ -45,10 +47,10 @@ const LiveArticleCard = ({ article }: LiveArticleCardProps) => {
 
   return (
     <div className="relative my-2">
-      <motion.div
-        className={'bg-white p-4 rounded-2xl shadow-sm border border-neutral-200 cursor-pointer'}
-        onClick={async () => {
-          triggerHaptic();
+      <WarningModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onConfirm={async () => {
           if (user) {
             const { data: stats, error } = await supabase
               .from('user_stats')
@@ -65,6 +67,15 @@ const LiveArticleCard = ({ article }: LiveArticleCardProps) => {
             }
           }
           Browser.open({ url: article.link });
+        }}
+        header="Hold up!"
+        message="You're about to venture into the wild web! Don't get lost in the rabbit hole. We'll be waiting for you back here."
+      />
+      <motion.div
+        className={'bg-white p-4 rounded-2xl shadow-sm border border-neutral-200 cursor-pointer'}
+        onClick={() => {
+          triggerHaptic();
+          setIsModalOpen(true);
         }}
         whileHover={{ scale: 1.01, transition: { duration: 0.2 } }}
         whileTap={{ scale: 0.99 }}

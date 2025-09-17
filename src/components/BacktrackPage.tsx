@@ -1,11 +1,12 @@
 import { useState, useEffect, useMemo, memo } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { IonContent, IonPage, IonIcon } from '@ionic/react';
-import { search, arrowForward } from 'ionicons/icons';
+import { search, arrowForward, sparkles } from 'ionicons/icons';
 import config from '../config';
 import Particles, { initParticlesEngine } from '@tsparticles/react';
 import { loadAll } from '@tsparticles/all';
 import { useHaptics } from '../hooks/useHaptics';
+import AnswerDrawer from './AnswerDrawer';
 
 const StarryBackground = memo(() => {
   const [init, setInit] = useState(false);
@@ -67,6 +68,41 @@ const BacktrackPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [hasSwiped, setHasSwiped] = useState(false);
   const [expandedCard, setExpandedCard] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedQuestion, setSelectedQuestion] = useState<any>(null);
+  const [aiAnswer, setAiAnswer] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const handleKnowAnswer = async (result: any) => {
+    setSelectedQuestion(result);
+    setAiAnswer(''); // Clear previous answer
+    setIsAiLoading(true); // Set loading state
+    setIsModalOpen(true); // Then open the modal
+    try {
+      const response = await fetch(`${config.API_BASE_URL}/pyq-answer-cached`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          question: result.stem,
+          context: {
+            exam_type: result.exam_type,
+            paper: result.paper,
+            year: result.year,
+            question_type: result.question_type,
+          },
+        }),
+      });
+      const data = await response.json();
+      setAiAnswer(data.answer);
+    } catch (error) {
+      console.error('Error fetching AI answer:', error);
+      setAiAnswer('Failed to fetch answer.');
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
 
   const handleSearch = async () => {
     triggerHaptic();
@@ -145,9 +181,10 @@ const BacktrackPage = () => {
               </div>
             ) : (
               <div className="relative w-full h-full">
-                {results.map((result: any, index: number) => (
-  <motion.div
-    key={result.question_text}
+                <AnimatePresence>
+                  {results.map((result: any, index: number) => (
+                    <motion.div
+                      key={result.question_text}
     drag="x"
     dragConstraints={{ left: 0, right: 0 }}
     onDragEnd={(_, info) => {
@@ -157,26 +194,30 @@ const BacktrackPage = () => {
         if (!hasSwiped) setHasSwiped(true);
       }
     }}
-    initial={{ scale: 1, y: 0, rotate: 0 }}
+    initial={{ opacity: 0, y: 50, scale: 1, rotate: 0 }}
     animate={
       expandedCard === result.question_text
-        ? { scale: 1.2, y: -40, zIndex: 40 }
+        ? { scale: 1.2, y: -40, zIndex: 40, opacity: 1 }
         : {
             scale: 1 - Math.min(index, 3) * 0.05,
             y: index * 10,
             zIndex: results.length - index,
+            opacity: 1,
           }
     }
     transition={{ type: 'spring', stiffness: 300, damping: 30 }}
     className={`absolute w-full p-8 rounded-3xl border border-gray-700 shadow-2xl cursor-grab active:cursor-grabbing ${
       expandedCard === result.question_text
         ? 'z-40 h-full overflow-y-auto bg-gray-900'
-        : 'bg-gray-900 h-auto max-h-full  overflow-hidden'
+        : 'bg-gray-900 h-auto max-h-full overflow-y-auto'
     }`}
     style={{
       transformOrigin: 'bottom center',
     }}
-    onClick={() => {
+    onTap={(e: any) => {
+      if (e.target.closest('.know-answer-button')) {
+        return;
+      }
       if (index === 0) {
         if (expandedCard === result.question_text) {
           setExpandedCard(null);
@@ -197,6 +238,15 @@ const BacktrackPage = () => {
             </div>
           ))}
         </div>
+        <div className="mt-4">
+          <motion.button
+            onTap={() => handleKnowAnswer(result)}
+            className="know-answer-button flex items-center justify-center w-full px-4 py-2 text-sm font-medium text-white bg-blue-500 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <IonIcon icon={sparkles} className="mr-2" />
+            Know Answer
+          </motion.button>
+        </div>
       </div>
     ) : (
       <p className="text-gray-200 text-lg leading-relaxed">{result.question_text}</p>
@@ -207,7 +257,7 @@ const BacktrackPage = () => {
     </div>
   </motion.div>
 ))}
-
+                </AnimatePresence>
               </div>
             )}
             {!isLoading && results.length > 0 && !hasSwiped && (
@@ -223,6 +273,13 @@ const BacktrackPage = () => {
             )}
           </div>
         </motion.div>
+        <AnswerDrawer
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          question={selectedQuestion?.stem || ''}
+          answer={aiAnswer}
+          isLoading={isAiLoading}
+        />
       </IonContent>
     </IonPage>
   );

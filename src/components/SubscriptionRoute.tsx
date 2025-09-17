@@ -1,4 +1,5 @@
 import { Redirect, Route, useHistory } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { useProfile } from '../context/ProfileContext';
 import { supabase } from '../lib/supabaseClient';
@@ -14,6 +15,39 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
   const { profile, loading: profileLoading } = useProfile();
   const { isConfigured } = useRevenueCat();
   const history = useHistory();
+  const [showPaywall, setShowPaywall] = useState(false);
+  const [lastDismissedAt, setLastDismissedAt] = useState<Date | null>(null);
+
+  useEffect(() => {
+    if (profile && requireActiveSubscription && profile.subscription_status !== 'active') {
+      const createdAt = new Date(profile.created_at);
+      const trialEndDate = new Date(createdAt.getTime() + 3 * 24 * 60 * 60 * 1000);
+      const now = new Date();
+      const isTrialActive = now < trialEndDate;
+
+      if (isTrialActive) {
+        // Initial paywall after onboarding
+        const initialPaywallShown = localStorage.getItem('initialPaywallShown');
+        if (profile.daily_update_time && !initialPaywallShown) {
+          localStorage.setItem('initialPaywallShown', 'true');
+          setTimeout(() => {
+            setShowPaywall(true);
+          }, 30000);
+        } else {
+          // Random paywall with cooldown
+          const cooldownPeriod = 60 * 60 * 1000; // 1 hour
+          if (!lastDismissedAt || now.getTime() - lastDismissedAt.getTime() > cooldownPeriod) {
+            if (Math.random() < 0.2) { // 20% chance
+              setShowPaywall(true);
+            }
+          }
+        }
+      } else {
+        // Persistent paywall after trial
+        setShowPaywall(true);
+      }
+    }
+  }, [profile, requireActiveSubscription, history.location]);
 
   if (authLoading || profileLoading) {
     return (
@@ -72,24 +106,31 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
     }
 
     const planToOffering: { [key: string]: string } = {
-      'prepbit-yearly': 'Yearly',
-      'prepbit-monthly': 'Monthly',
-      'prepbit-1-day-trial': 'Trial',
+      'monthly-trial': 'monthly-trial',
+      'yearly-trial': 'yearly-trial',
+      'monthly-nontrial': 'monthly-nontrial',
+      'yearly-nontrial': 'yearly-nontrial',
+      'monthly-promo-trial': 'monthly-promo-trial',
+      'monthly-promo-nontrial': 'monthly-promo-nontrial',
+      'yearly-promo-trial': 'yearly promo trial',
+      'yearly-promo-nontrial-3': 'yearly-promo-nontrial-3',
     };
 
     try {
       const offerings = await Purchases.getOfferings();
+      console.log('Available offerings:', offerings.all);
       const baseOfferingId = planToOffering[planId];
       if (!baseOfferingId) {
         console.error('Invalid planId:', planId);
         return;
       }
+      console.log('baseOfferingId:', baseOfferingId);
 
-      const offeringIdentifier = promoCode && !planId.includes('trial') ? `${baseOfferingId}_promo` : baseOfferingId;
-      const offering = offerings.all[offeringIdentifier];
+      const offering = offerings.all[baseOfferingId];
+      console.log('Selected offering:', offering);
       if (!offering) {
-        console.error('Offering not found:', offeringIdentifier);
-        showToast(`Offering not found: ${offeringIdentifier}`);
+        console.error('Offering not found:', planId);
+        showToast(`Offering not found: ${planId}`);
         return;
       }
       const packageToPurchase = offering.availablePackages[0];
@@ -97,7 +138,11 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
         console.error('Package not found:', planId);
         return;
       }
+      console.log(`Attempting to purchase plan: ${planId}`);
       const { customerInfo } = await Purchases.purchasePackage({ aPackage: packageToPurchase });
+      console.log('RevenueCat customer info:', customerInfo);
+      showToast('Purchase successful!');
+
       if (Object.keys(customerInfo.entitlements.active).length > 0) {
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
@@ -149,13 +194,20 @@ const SubscriptionRoute = ({ component: Component, requireActiveSubscription = t
     }
   };
 
-  if (requireActiveSubscription && profile?.subscription_status !== 'active') {
+  if (showPaywall) {
+    const isFirstTime = !localStorage.getItem('initialPaywallShown');
     return (
       <PaywallPage
         onPurchase={handlePurchase}
         onRestore={() => console.log('Restore purchase')}
         onApplyPromoCode={handleApplyPromoCode}
         showToast={showToast}
+        isDismissible={new Date() < new Date(new Date(profile!.created_at).getTime() + 3 * 24 * 60 * 60 * 1000)}
+        onDismiss={() => {
+          setShowPaywall(false);
+          setLastDismissedAt(new Date());
+        }}
+        isFirstTime={isFirstTime}
       />
     );
   }

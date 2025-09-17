@@ -337,7 +337,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
               >
                 {activeTab === 'daily-update' ? (
                   <div className="px-4 pt-4 pb-28 space-y-4">
-                    {loading ? (
+                    {loading && activeTab === 'daily-update' ? (
                       <SkeletonLoader />
                     ) : filteredNews.length > 0 ? (
                       <div>
@@ -379,7 +379,7 @@ const MainScreen = ({ showToast }: MainScreenProps) => {
                 )}
               </motion.div>
             </AnimatePresence>
-            {!loading && hasMore && (
+            {!loading && hasMore && activeTab === 'daily-update' && (
               <div ref={ref} className="flex justify-center my-4">
                 {loadingMore && (
                   <div className="flex items-center space-x-2">

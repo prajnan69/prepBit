@@ -4,6 +4,7 @@ import { motion, AnimatePresence, type Variants, useMotionValue, useTransform, a
 import config from '../../config';
 import { Hourglass } from 'lucide-react';
 import { useHaptics } from '../../hooks/useHaptics';
+import { useProfile } from '../../context/ProfileContext';
 import { Capacitor } from '@capacitor/core';
 import UpiPaymentPage from './UpiPaymentPage';
 const useIsMobile = () => typeof window !== 'undefined' ? window.innerWidth < 768 : false;
@@ -37,6 +38,9 @@ interface PaywallPageProps {
   onRestore?: () => void;
   onApplyPromoCode: (promoCode: string) => Promise<{ isValid: boolean; message?: string; timeLeft?: number }>;
   showToast: (message: string) => void;
+  isDismissible?: boolean;
+  onDismiss?: () => void;
+  isFirstTime?: boolean;
 }
 
 const AnimatedPrice = ({ from, to }: { from: number, to: number }) => {
@@ -45,7 +49,7 @@ const AnimatedPrice = ({ from, to }: { from: number, to: number }) => {
 
   useEffect(() => {
     const controls = animate(motionValue, to, {
-      duration: 7,
+      duration: 10,
       ease: 'easeOut',
     });
     return controls.stop;
@@ -54,18 +58,23 @@ const AnimatedPrice = ({ from, to }: { from: number, to: number }) => {
   return <motion.span>{price}</motion.span>;
 };
 
-const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPageProps) => {
+const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode, showToast, isDismissible, onDismiss, isFirstTime }: PaywallPageProps) => {
   const ionRouter = useIonRouter();
+  const { profile } = useProfile();
   const { triggerHaptic, triggerErrorHaptic, triggerPriceAnimationHaptic } = useHaptics();
-  const [selectedPlan, setSelectedPlan] = useState<string>('prepbit-yearly');
+  const [trialTimeLeft, setTrialTimeLeft] = useState('');
+  const [selectedPlan, setSelectedPlan] = useState<string>('monthly-trial');
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [plans, setPlans] = useState<Record<string, Plan>>({});
+  const [isTrial, setIsTrial] = useState(true);
   const [promoPlans, setPromoPlans] = useState<Record<string, Plan>>({});
   const [promoCode, setPromoCode] = useState('');
   const [promoStatus, setPromoStatus] = useState<{ isValid: boolean | null; message?: string }>({ isValid: null });
   const [isLoading, setIsLoading] = useState(true);
   const [isApplyingPromo, setIsApplyingPromo] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [isTrialAnimating, setIsTrialAnimating] = useState(false);
+  const [hasSeenDiscount, setHasSeenDiscount] = useState(false);
   const [showOriginalPrice, setShowOriginalPrice] = useState(false);
   const [countdown, setCountdown] = useState(180);
   const [showTimer, setShowTimer] = useState(false);
@@ -74,48 +83,101 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
   const [showUpiModal, setShowUpiModal] = useState(false);
   const [paymentStatus, setPaymentStatus] = useState<'idle' | 'verifying'>('idle');
 
+  const getPlanId = (planType: 'monthly' | 'yearly') => {
+    const trialOrNontrial = isTrial ? 'trial' : 'nontrial';
+    const promoOrNot = promoStatus.isValid ? '-promo' : '';
+    let suffix = '';
+    if (planType === 'yearly' && promoStatus.isValid && !isTrial) {
+      suffix = '-3';
+    }
+    return `${planType}${promoOrNot}-${trialOrNontrial}${suffix}`;
+  };
+
+  useEffect(() => {
+    const planType = selectedPlan.startsWith('monthly') ? 'monthly' : 'yearly';
+    setSelectedPlan(getPlanId(planType));
+  }, [isTrial, promoStatus.isValid]);
+
+  useEffect(() => {
+    if (isDrawerOpen) {
+      setIsTrialAnimating(true);
+      triggerPriceAnimationHaptic(3000);
+      if (!isTrial) {
+        setHasSeenDiscount(true);
+      } else {
+        if (!showTimer) {
+          setPromoStatus({ isValid: null });
+        }
+      }
+      const timer = setTimeout(() => setIsTrialAnimating(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isTrial, isDrawerOpen, showTimer]);
+
+  useEffect(() => {
+    if (profile?.created_at) {
+      const interval = setInterval(() => {
+        const createdAt = new Date(profile.created_at);
+        const trialEndDate = new Date(createdAt.getTime() + 3 * 24 * 60 * 60 * 1000);
+        const now = new Date();
+        const diff = trialEndDate.getTime() - now.getTime();
+
+        if (diff <= 0) {
+          setTrialTimeLeft('0 days');
+          clearInterval(interval);
+          return;
+        }
+
+        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+        setTrialTimeLeft(`${days}d ${hours}h ${minutes}m ${seconds}s `);
+      }, 1000);
+
+      return () => clearInterval(interval);
+    }
+  }, [profile]);
+
   useEffect(() => {
     const fetchPlans = async () => {
       try {
         const response = await fetch(`${config.API_BASE_URL}/get-plans`);
         const data = await response.json();
+        console.log('API Response:', data);
         const formattedPlans: Record<string, Plan> = {};
         const formattedPromoPlans: Record<string, Plan> = {};
         data.subscriptions.forEach((sub: any) => {
           sub.basePlans.forEach((plan: any) => {
-            if (plan.state === 'ACTIVE') {
+            if (plan.state === 'ACTIVE' || plan.state === 'DRAFT') {
               const price = plan.regionalConfigs[0].price;
               const isYearly = plan.autoRenewingBasePlanType?.billingPeriodDuration === 'P1Y';
-              const isTrial = plan.prepaidBasePlanType?.billingPeriodDuration === 'P1D';
               let perDayPrice;
               let subtitle;
               let description;
 
-              if (isTrial) {
-                perDayPrice = price.units;
-                subtitle = `One-time access for 24 hours`;
-                description = "Explore all our premium features for a full 24 hours. A perfect way to see if we're the right fit for you.";
-              } else if (isYearly) {
+              if (isYearly) {
                 perDayPrice = (price.units / 365).toFixed(2);
                 subtitle = `Billed as ₹${price.units} per year`;
                 description = 'Commit to your success and save big. Get a full year of uninterrupted access to all our premium features.';
               } else {
-                perDayPrice = (price.units / 31).toFixed(2);
+                perDayPrice = (price.units / 30).toFixed(2);
                 subtitle = `Billed as ₹${price.units} per month`;
                 description = 'Stay flexible with our monthly plan. Get full access to all premium features with the ability to cancel anytime.';
               }
 
               const planData = {
                 id: plan.basePlanId,
-                title: plan.basePlanId.replace('prepbit-', '').replace(/-promo-base$/, '').replace('-', ' '),
+                title: plan.basePlanId.replace(/-promo-base$/, '').replace('-trial', '').replace('-nontrial', '').replace('-', ' ').replace(/\d/g, ''),
                 price: `₹${perDayPrice}`,
                 period: '/ day',
                 subtitle: subtitle,
                 description: description,
               };
 
-              if (plan.basePlanId.includes('-promo-base')) {
-                const originalPlanId = plan.basePlanId.replace('-promo-base', '');
+              if (plan.basePlanId.includes('-promo')) {
+                const originalPlanId = plan.basePlanId.replace('-promo', '');
                 formattedPromoPlans[originalPlanId] = planData;
               } else {
                 formattedPlans[plan.basePlanId] = planData;
@@ -135,31 +197,114 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
   }, []);
 
   const renderPrice = (planId: string, size: '3xl' | 'xl') => {
-    const originalPriceStr = plans[planId]?.price.slice(1);
-    const promoPriceStr = promoPlans[planId]?.price.slice(1);
-    const originalPrice = parseFloat(originalPriceStr || '0');
-    const promoPrice = parseFloat(promoPriceStr || '0');
+    if (planId === 'free-trial') {
+      return (
+        <div className={`font-bold text-${size} ${trialTimeLeft === '0 days' ? 'text-red-500' : 'text-white'}`}>
+          <span>{trialTimeLeft}</span>
+        </div>
+      );
+    }
 
-    const shouldAnimate = isAnimating && promoStatus.isValid && promoPlans[planId];
+    const planType = planId.split('-')[0] as 'monthly' | 'yearly';
+
+    const toTrialState = isTrial ? 'trial' : 'nontrial';
+    let toSuffix = '';
+    if (planType === 'yearly' && !promoStatus.isValid) {
+      toSuffix = '-3';
+    }
+    let toBasePlanId = `${planType}-${toTrialState}${toSuffix}`;
+    if (planType === 'yearly' && promoStatus.isValid && isTrial) {
+      toBasePlanId = 'yearly-trial-2';
+    }
+    const toPlan = (promoStatus.isValid && promoPlans[toBasePlanId]) || plans[toBasePlanId];
+    const toPrice = parseFloat(toPlan?.price.slice(1) || '0');
+
+    const fromTrialState = !isTrial ? 'trial' : 'nontrial';
+    let fromSuffix = '';
+    if (planType === 'yearly' && !promoStatus.isValid) {
+      fromSuffix = '-3';
+    }
+    const fromBasePlanId = `${planType}-${fromTrialState}${fromSuffix}`;
+    const fromPlan = (promoStatus.isValid && promoPlans[fromBasePlanId]) || plans[fromBasePlanId];
+    const fromPrice = parseFloat(fromPlan?.price.slice(1) || '0');
+
+    const isPromoAnimating = isAnimating && promoStatus.isValid;
+    if (isPromoAnimating) {
+        const currentTrialState = isTrial ? 'trial' : 'nontrial';
+        const nonPromoSuffix = planType === 'yearly' ? '-3' : '';
+        const nonPromoPlanId = `${planType}-${currentTrialState}${nonPromoSuffix}`;
+        const nonPromoPlan = plans[nonPromoPlanId];
+        const nonPromoPrice = parseFloat(nonPromoPlan?.price.slice(1) || '0');
+        
+        return (
+            <div className={`font-bold text-${size} text-white`}>
+                <AnimatedPrice from={nonPromoPrice} to={toPrice} />
+            </div>
+        );
+    }
+
+    if (isTrialAnimating && fromPrice !== toPrice) {
+      return (
+        <div className={`font-bold text-${size} text-white`}>
+          <AnimatedPrice from={fromPrice} to={toPrice} />
+        </div>
+      );
+    }
 
     return (
       <div className={`font-bold text-${size} text-white`}>
-        {shouldAnimate ? (
-          <AnimatedPrice from={originalPrice} to={promoPrice} />
-        ) : (
-          <span>{(promoStatus.isValid && promoPlans[planId]) ? promoPlans[planId].price : plans[planId]?.price}</span>
-        )}
+        <span>{toPlan?.price || ''}</span>
       </div>
     );
   };
 
-  const sortedPlans = Object.values(plans).sort((a, b) => {
-    if (a.id === 'prepbit-yearly') return -1;
-    if (b.id === 'prepbit-yearly') return 1;
-    if (a.id === 'prepbit-monthly') return -1;
-    if (b.id === 'prepbit-monthly') return 1;
-    return 0;
-  });
+  const handleApplyPromoCode = async () => {
+    triggerHaptic();
+    setIsApplyingPromo(true);
+    const result = await onApplyPromoCode(promoCode);
+    setPromoStatus(result);
+    if (result.isValid) {
+      setShowOriginalPrice(true);
+      setIsAnimating(true);
+      triggerPriceAnimationHaptic(3000);
+      setShowTimer(true);
+      setCountdown(result.timeLeft || 180);
+      setTimeout(() => setIsAnimating(false), 3000);
+    } else {
+      triggerErrorHaptic();
+    }
+    setIsApplyingPromo(false);
+  };
+
+  const getPlanForDrawer = (type: 'monthly' | 'yearly') => {
+    if (type === 'yearly' && promoStatus.isValid && isTrial) {
+      return promoPlans['yearly-trial-2'];
+    }
+    const trialOrNontrial = isTrial ? 'trial' : 'nontrial';
+    let suffix = '';
+    if (type === 'yearly' && !promoStatus.isValid) {
+      suffix = '-3';
+    }
+    const basePlanId = `${type}-${trialOrNontrial}${suffix}`;
+    if (promoStatus.isValid && promoPlans[basePlanId]) {
+      return promoPlans[basePlanId];
+    }
+    return plans[basePlanId];
+  };
+  const monthlyPlanForDrawer = getPlanForDrawer('monthly');
+  const yearlyPlanForDrawer = getPlanForDrawer('yearly');
+  const drawerPlans = [
+    {
+      id: 'free-trial',
+      title: 'Free Trial',
+      price: '3 days',
+      period: 'left',
+      subtitle: 'Full access to all features',
+      description: 'Explore all premium features for a week, absolutely free.',
+    },
+  ];
+  if (monthlyPlanForDrawer) drawerPlans.push(monthlyPlanForDrawer);
+  if (yearlyPlanForDrawer) drawerPlans.push(yearlyPlanForDrawer);
 
   if (!isNative) {
     if (showUpiModal) {
@@ -201,34 +346,40 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
         <div className="flex-grow overflow-y-auto">
           <div className="flex flex-col justify-start min-h-full w-full max-w-md md:max-w-4xl mx-auto px-6 pt-6 pb-36">
             <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Unlock Your Potential</h1>
+              <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Unlock Your Potential🎉</h1>
               <p className="text-slate-300 mt-1 text-base md:text-lg">Join thousands of successful students</p>
             </motion.div>
             <div className="mt-8 text-center">
               <p className="text-slate-300">We are currently working on our iOS application. In the meantime, we are only able to offer our yearly subscription through the browser. We apologize for any inconvenience.</p>
             </div>
-            {plans['prepbit-yearly'] && (
+            {plans['monthly-trial'] && (
               <motion.div
-                onClick={() => handleSelectPlan('prepbit-yearly')}
+                onClick={() => handleSelectPlan('monthly')}
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1, transition: { delay: 0.3 } }}
                 className={`relative p-5 mt-8 md:mt-4 rounded-2xl cursor-pointer transition-all border-2 bg-slate-800 
-                  ${selectedPlan === 'prepbit-yearly' ? 'border-indigo-500' : 'border-slate-700'}`}
+                  ${selectedPlan.startsWith('monthly') ? 'border-indigo-500' : 'border-slate-700'}`}
               >
                 <div className="absolute -top-4 left-6 bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   Best Value
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="text-left">
-                    <p className="font-bold text-green-400">{plans['prepbit-yearly'].save}</p>
-                    <h2 className="text-2xl font-bold mt-1">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].title : plans[selectedPlan]?.title}</h2>
-                    <p className="text-slate-400 text-sm">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].subtitle : plans[selectedPlan]?.subtitle}</p>
-                    <p className="text-green-400 text-xs font-medium mt-1">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].extra : plans[selectedPlan]?.extra}</p>
+                    <p className="font-bold text-green-400">{plans[selectedPlan]?.save}</p>
+                    <h2 className="text-2xl font-bold mt-1">{plans[selectedPlan]?.title}</h2>
+                        <p className="text-slate-400 text-sm">{plans[selectedPlan]?.subtitle}</p>
+                        {isTrial && (
+                          <p className="text-xs text-yellow-300 mt-1">3 days free trial</p>
+                        )}
+                        <p className="text-green-400 text-xs font-medium mt-1">{plans[selectedPlan]?.extra}</p>
                   </div>
                   <div className="text-right">
                     <div className="flex items-baseline gap-1">
-                      {renderPrice('prepbit-yearly', '3xl')}
-                      <p className="text-sm text-slate-400">{plans['prepbit-yearly'].period}</p>
+                      {showOriginalPrice && (
+                        <p className="text-base text-slate-400 line-through mr-1">{plans[selectedPlan]?.price}</p>
+                      )}
+                      {renderPrice(selectedPlan, '3xl')}
+                      <p className="text-sm text-slate-400">{plans[selectedPlan]?.period}</p>
                     </div>
                   </div>
                 </div>
@@ -246,23 +397,7 @@ const PaywallPage = ({ onPurchase, onRestore, onApplyPromoCode }: PaywallPagePro
                 className="flex-grow p-2 rounded-lg bg-slate-700 text-white border-2 border-slate-600 focus:border-indigo-500 focus:outline-none"
               />
               <button
-                onClick={async () => {
-                  triggerHaptic();
-                  setIsApplyingPromo(true);
-                  const result = await onApplyPromoCode(promoCode);
-                  setPromoStatus(result);
-                  if (result.isValid) {
-                    setShowOriginalPrice(true);
-                    setIsAnimating(true);
-                    triggerPriceAnimationHaptic(2000);
-                    setShowTimer(true);
-                    setCountdown(result.timeLeft || 180);
-                    setTimeout(() => setIsAnimating(false), 2000);
-                  } else {
-                    triggerErrorHaptic();
-                  }
-                  setIsApplyingPromo(false);
-                }}
+                onClick={handleApplyPromoCode}
                 className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-500 transition-all"
                 disabled={isApplyingPromo}
               >
@@ -343,7 +478,8 @@ r                </motion.p>
 
   const handleSelectPlan = (planId: string) => {
     triggerHaptic();
-    setSelectedPlan(planId);
+    const planType = planId.startsWith('monthly') ? 'monthly' : 'yearly';
+    setSelectedPlan(getPlanId(planType));
     if (isDrawerOpen) setIsDrawerOpen(false);
   };
 
@@ -397,9 +533,18 @@ r                </motion.p>
         */}
         <div className="flex flex-col justify-start min-h-full w-full max-w-md md:max-w-4xl mx-auto px-6 pt-6 pb-36">
 
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">Unlock Your Potential</h1>
-            <p className="text-slate-300 mt-1 text-base md:text-lg">Join thousands of successful students</p>
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center relative pt-8">
+            {isDismissible && (
+              <button onClick={onDismiss} className="absolute top-0 right-0 p-2 text-slate-400 hover:text-white">
+                <CloseIcon className="w-6 h-6" />
+              </button>
+            )}
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">
+              {isFirstTime ? 'Unlock Your Potential' : 'You\'re Missing Out!'}
+            </h1>
+            <p className="text-slate-300 mt-1 text-base md:text-lg">
+              {isFirstTime ? 'Join thousands of successful students' : 'Subscribe now to get unlimited access.'}
+            </p>
           </motion.div>
 
           <div className="md:grid md:grid-cols-2 md:gap-8 md:items-start">
@@ -419,29 +564,46 @@ r                </motion.p>
                   <p className="text-slate-400 text-xs mt-1">Powerful search for any topic.</p>
                 </div>
                 <div className="bg-slate-800/50 p-4 rounded-lg">
-                  <h4 className="font-semibold text-base text-white">BackTrack</h4>
+                  <h4 className="font-semibold text-base text-white">PYQs</h4>
                   <p className="text-slate-400 text-xs mt-1">Trace topics to past questions.</p>
                 </div>
               </div>
             </motion.div>
 
-            {plans['prepbit-yearly'] && (
+            {plans['monthly-trial'] && (
               <motion.div
-                onClick={() => handleSelectPlan('prepbit-yearly')}
+                onClick={() => handleSelectPlan('monthly')}
                 initial={{ scale: 0.95, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1, transition: { delay: 0.3 } }}
                 className={`relative p-5 mt-8 md:mt-4 rounded-2xl cursor-pointer transition-all border-2 bg-slate-800 
-                  ${selectedPlan === 'prepbit-yearly' ? 'border-indigo-500' : 'border-slate-700'}`}
+                  ${selectedPlan.startsWith('monthly') ? 'border-indigo-500' : 'border-slate-700'}`}
               >
                 <div className="absolute -top-4 left-6 bg-indigo-500 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider">
                   Best Value
                 </div>
                 <div className="flex justify-between items-center">
                   <div className="text-left">
-                    <p className="font-bold text-green-400">{plans['prepbit-yearly'].save}</p>
-                    <h2 className="text-2xl font-bold mt-1">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].title : plans[selectedPlan]?.title}</h2>
-                    <p className="text-slate-400 text-sm">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].subtitle : plans[selectedPlan]?.subtitle}</p>
-                    <p className="text-green-400 text-xs font-medium mt-1">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].extra : plans[selectedPlan]?.extra}</p>
+                    {isNative && selectedPlan.includes('yearly') && hasSeenDiscount ? (
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }}>
+                        <h2 className="text-2xl font-bold mt-1">{plans[selectedPlan]?.title}</h2>
+                        <p className="text-slate-400 text-sm">{plans[selectedPlan]?.subtitle}</p>
+                        {!isTrial ? (
+                          <>
+                            <p className="font-bold text-green-400">Save {Math.round(((3899 - 3499) / 3899) * 100)}%</p>
+                            <p className="text-green-400 text-xs font-medium mt-1">Includes 2 months free</p>
+                          </>
+                        ) : (
+                          <p className="text-green-400 text-xs font-medium mt-1">Switch to non-trial to avail exciting offers 🎉</p>
+                        )}
+                      </motion.div>
+                    ) : (
+                      <>
+                        <p className="font-bold text-green-400">{plans[selectedPlan]?.save}</p>
+                        <h2 className="text-2xl font-bold mt-1">{plans[selectedPlan]?.title}</h2>
+                        <p className="text-slate-400 text-sm">{plans[selectedPlan]?.subtitle}</p>
+                        <p className="text-green-400 text-xs font-medium mt-1">{plans[selectedPlan]?.extra}</p>
+                      </>
+                    )}
                   </div>
                   <div className="text-right">
                     <div className="flex items-baseline gap-1">
@@ -449,7 +611,7 @@ r                </motion.p>
                         <p className="text-base text-slate-400 line-through mr-1">{plans[selectedPlan]?.price}</p>
                       )}
                       {renderPrice(selectedPlan, '3xl')}
-                      <p className="text-sm text-slate-400">{(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].period : plans[selectedPlan]?.period}</p>
+                      <p className="text-sm text-slate-400">{plans[selectedPlan]?.period}</p>
                     </div>
                   </div>
                 </div>
@@ -463,7 +625,9 @@ r                </motion.p>
         <div className="w-full max-w-md md:max-w-xl mx-auto">
           <button onClick={() => {
             triggerHaptic();
-            onPurchase(selectedPlan, promoStatus.isValid ? promoCode : undefined);
+            const planType = selectedPlan.startsWith('monthly') ? 'monthly' : 'yearly';
+            const planId = getPlanId(planType);
+            onPurchase(planId, promoStatus.isValid ? promoCode : undefined);
           }} className="w-full py-3 bg-indigo-600 text-white text-lg font-bold rounded-xl shadow-lg shadow-indigo-500/50 hover:bg-indigo-500 transition-all animate-pulse">
             Continue with {(promoStatus.isValid && promoPlans[selectedPlan]) ? promoPlans[selectedPlan].title : plans[selectedPlan]?.title}
           </button>
@@ -488,12 +652,21 @@ r                </motion.p>
             <motion.div variants={drawerVariants} initial="hidden" animate="visible" exit="exit" className="fixed bottom-0 left-0 right-0 p-6 bg-slate-800 rounded-t-2xl shadow-2xl z-50">
               <div className="flex justify-between items-center mb-4">
                 <h3 className="text-xl font-bold">Choose a Plan</h3>
-                <button onClick={() => {
-                  triggerHaptic();
-                  setIsDrawerOpen(false);
-                }} className="p-1 rounded-full text-slate-400 hover:bg-slate-700">
-                  <CloseIcon className="w-6 h-6"/>
-                </button>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center">
+                    <span className="text-slate-400 text-sm">Free Trial</span>
+                    <label className="relative inline-flex items-center cursor-pointer ml-2">
+                      <input type="checkbox" checked={isTrial} onChange={() => setIsTrial(!isTrial)} className="sr-only peer" />
+                      <div className="w-11 h-6 bg-slate-700 rounded-full peer peer-focus:ring-4 peer-focus:ring-indigo-500/50 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                  </div>
+                  <button onClick={() => {
+                    triggerHaptic();
+                    setIsDrawerOpen(false);
+                  }} className="p-1 rounded-full text-slate-400 hover:bg-slate-700">
+                    <CloseIcon className="w-6 h-6"/>
+                  </button>
+                </div>
               </div>
               {showTimer && (
                 <div className="flex items-center justify-center gap-2 mb-4">
@@ -503,28 +676,52 @@ r                </motion.p>
                 </div>
               )}
               <div className="space-y-3">
-                {sortedPlans.map((plan) => (
+                {drawerPlans.map((plan) => (
                   <div
                     key={plan.id}
                     onClick={() => {
-                      handleSelectPlan(plan.id);
-                      onPurchase(plan.id, promoStatus.isValid ? promoCode : undefined);
+                      if (plan.id === 'free-trial') {
+                        if (trialTimeLeft === '0 days') {
+                          triggerErrorHaptic();
+                          showToast('Free trial is over. Please support our work by taking a subscription.');
+                        } else {
+                          showToast('Enjoy your free trial!');
+                          onDismiss?.();
+                        }
+                        return;
+                      }
+                      const planType = plan.id.startsWith('monthly') ? 'monthly' : 'yearly';
+                      const planId = getPlanId(planType);
+                      handleSelectPlan(planId);
+                      onPurchase(planId, promoStatus.isValid ? promoCode : undefined);
                     }}
                     className={`flex items-center justify-between p-4 rounded-xl cursor-pointer border-2 transition-all
-                      bg-slate-700/50 ${selectedPlan === plan.id ? 'border-indigo-500' : 'border-slate-600 hover:border-slate-500'}`}
+                      bg-slate-700/50 ${selectedPlan === plan.id ? 'border-indigo-500' : 
+                      (plan.id === 'free-trial' && trialTimeLeft === '0 days' ? 'border-red-500' : 'border-slate-600 hover:border-slate-500')} ${!isTrial && plan.id === 'free-trial' ? 'bg-slate-800' : ''}`}
                   >
                     <div>
                       <p className="font-bold text-white text-lg">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].title : plan.title}</p>
                       <p className="text-sm text-slate-400">{(promoStatus.isValid && promoPlans[plan.id]) ? promoPlans[plan.id].subtitle : plan.subtitle}</p>
+                      {isTrial && plan.id !== 'free-trial' && (
+                        <p className="text-xs text-yellow-300 mt-1">3 days free trial</p>
+                      )}
+                      <AnimatePresence>
+                        {isNative && plan.id.includes('yearly') && hasSeenDiscount && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }}>
+                            <p className="text-green-400 text-xs font-medium mt-1">
+                              {isTrial ? "Switch to non-trial to avail exciting offers 🎉" : "Includes 2 months free"}
+                            </p>
+                            {!isTrial && <p className="text-green-400 text-xs font-medium">Save {Math.round(((3899 - 3499) / 3899) * 100)}%</p>}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                       <button onClick={(e) => {
                         e.stopPropagation();
                         ionRouter.push('/all-plans');
                       }} className="text-xs text-indigo-400 hover:underline mt-2">
                         Read More
                       </button>
-                      {plan.id.includes('trial') && promoStatus.isValid && (
-                        <p className="text-xs text-yellow-300 mt-1">Only monthly and yearly subscriptions can use the promo code.</p>
-                      )}
+                     
                     </div>
                     <div className="text-right">
                       <div className="flex items-baseline gap-1">
@@ -549,23 +746,7 @@ r                </motion.p>
                     className="flex-grow p-2 rounded-lg bg-slate-700 text-white border-2 border-slate-600 focus:border-indigo-500 focus:outline-none"
                   />
                   <button
-                    onClick={async () => {
-                      triggerHaptic();
-                      setIsApplyingPromo(true);
-                      const result = await onApplyPromoCode(promoCode);
-                      setPromoStatus(result);
-                      if (result.isValid) {
-                        setShowOriginalPrice(true);
-                        setIsAnimating(true);
-                        triggerPriceAnimationHaptic(2000);
-                        setShowTimer(true);
-                        setCountdown(result.timeLeft || 180);
-                        setTimeout(() => setIsAnimating(false), 2000);
-                      } else {
-                        triggerErrorHaptic();
-                      }
-                      setIsApplyingPromo(false);
-                    }}
+                    onClick={handleApplyPromoCode}
                     className="px-4 py-2 bg-indigo-600 text-white font-bold rounded-lg hover:bg-indigo-500 transition-all"
                     disabled={isApplyingPromo}
                   >

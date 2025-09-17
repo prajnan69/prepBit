@@ -25,6 +25,8 @@ import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import DeleteAccountPage from './components/DeleteAccountPage';
 import SubscriptionRoute from './components/SubscriptionRoute';
 import { useAuth } from './hooks/useAuth';
+import { usePWA } from './hooks/usePWA';
+import { useFCM } from './hooks/useFCM';
 import NotificationToast from './components/NotificationToast';
 import BridgeProfilePage from './components/BridgeProfilePage';
 import PrivateRoute from './components/PrivateRoute';
@@ -38,6 +40,9 @@ import AffiliateOnboardingPage from './components/AffiliateOnboardingPage';
 import AffiliateDashboardPage from './components/AffiliateDashboardPage';
 import BridgePage from './components/BridgePage';
 import RevisePage from './components/RevisePage';
+import RatingModal from './components/RatingModal';
+import AdFrameworkPage from './components/AdFrameworkPage';
+import { Browser } from '@capacitor/browser';
 
 import '@ionic/react/css/core.css';
 import '@ionic/react/css/normalize.css';
@@ -54,7 +59,9 @@ setupIonicReact();
 
 const App = () => {
   const { session } = useAuth();
+  const { canInstall, promptInstall } = usePWA();
   const ionRouter = useIonRouter();
+  useFCM();
 
   useEffect(() => {
     if (Capacitor.getPlatform() === 'android' && !Capacitor.isNativePlatform()) {
@@ -112,6 +119,28 @@ const App = () => {
   const [examType, setExamType] = useState('');
   const [supportDrawer, setSupportDrawer] = useState<{ isOpen: boolean; type: 'bug' | 'feedback' | 'urgent' | null }>({ isOpen: false, type: null });
   const [notification, setNotification] = useState<any>(null);
+  const [isRatingModalOpen, setIsRatingModalOpen] = useState(false);
+
+  useEffect(() => {
+    const checkRatingStatus = () => {
+      const hasRated = localStorage.getItem('hasRated');
+      if (!hasRated) {
+        const lastPrompted = localStorage.getItem('lastRatingPrompt');
+        const now = new Date().getTime();
+        const oneWeek = 7 * 24 * 60 * 60 * 1000;
+
+        if (!lastPrompted || now - parseInt(lastPrompted, 10) > oneWeek) {
+          if (Math.random() < 0.1) { // 10% chance
+            setIsRatingModalOpen(true);
+            localStorage.setItem('lastRatingPrompt', now.toString());
+          }
+        }
+      }
+    };
+
+    const timer = setTimeout(checkRatingStatus, 5000); // Check after 5 seconds of app load
+    return () => clearTimeout(timer);
+  }, []);
 
   const showToastWithMessage = (message: string) => {
     setToastMessage(message);
@@ -162,6 +191,11 @@ const App = () => {
 
   return (
     <IonApp>
+      {canInstall && !Capacitor.isNativePlatform() && (
+        <button onClick={promptInstall} className="absolute top-4 right-4 bg-blue-500 text-white p-2 rounded">
+          Install App
+        </button>
+      )}
       <ProfileProvider>
         <SearchProvider>
           <IonReactRouter>
@@ -189,6 +223,7 @@ const App = () => {
                 <Route path="/bridge" component={BridgePage} exact />
                 <Route path="/external-profile" component={ProfilePage} exact />
                 <Route path="/revise" render={() => <RevisePage showToast={showToastWithMessage} />} exact />
+                <Route path="/ad-framework" component={AdFrameworkPage} exact />
                 
                 {/* --- Private Routes --- */}
                 <PrivateRoute>
@@ -222,6 +257,14 @@ const App = () => {
         />
       )}
       <NotificationToast notification={notification} onClose={() => setNotification(null)} />
+      <RatingModal
+        isOpen={isRatingModalOpen}
+        onClose={() => setIsRatingModalOpen(false)}
+        onConfirm={() => {
+          localStorage.setItem('hasRated', 'true');
+          Browser.open({ url: 'https://play.google.com/store/apps/details?id=com.prepbit.app' });
+        }}
+      />
     </IonApp>
   );
 };

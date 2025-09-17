@@ -11,6 +11,8 @@ interface Profile {
   state: string;
   subscription_status: string;
   phone: string;
+  created_at: string;
+  daily_update_time: string;
 }
 
 interface ProfileContextType {
@@ -33,7 +35,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         const { data, error } = await supabase
           .from('profiles')
-          .select('*, avatar_url')
+          .select('*, avatar_url, created_at')
           .eq('id', user.id)
           .single();
         if (error) {
